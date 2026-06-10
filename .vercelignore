@@ -1,0 +1,5 @@
+# Ignore AI-related files
+app/api/ai-chat
+components/ai
+node_modules/@ai-sdk
+node_modules/ai
