@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useMemo, useState } from "react"
 import type { User } from "@supabase/supabase-js"
 import { createClient } from "./supabase/client"
 
@@ -16,19 +16,35 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const isSupabaseConfigured = Boolean(
+  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+)
+
+function ensureAuthConfigured() {
+  if (!isSupabaseConfigured) {
+    throw new Error(
+      "Authentication is not configured yet. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local, then enable Google in Supabase.",
+    )
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
-    // Get initial session
+    if (!isSupabaseConfigured) {
+      setUser(null)
+      setLoading(false)
+      return
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       setLoading(false)
     })
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -37,17 +53,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     return () => subscription.unsubscribe()
-  }, [supabase.auth])
+  }, [supabase])
 
   const signUpWithEmail = async (email: string, password: string, fullName: string) => {
-    console.log("\n═══════════════════════════════════════")
-    console.log("🔵 SIGNUP ATTEMPT STARTED")
-    console.log("═══════════════════════════════════════")
-    console.log("📧 Email:", email)
-    console.log("👤 Full Name:", fullName)
-    console.log("🔐 Password Length:", password.length)
-    console.log("⏰ Timestamp:", new Date().toISOString())
-    console.log("\n📤 Calling signUp...\n")
+    ensureAuthConfigured()
 
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -60,85 +69,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     })
 
-    console.log("\n📊 [AUTH-CONTEXT] Supabase Response:")
-    console.log("═══════════════════════════════════════")
-    console.log("Has Error:", !!error)
     if (error) {
-      console.log("❌ Error Message:", error.message)
-      console.log("❌ Error Status:", error.status)
-      console.log("❌ Error Code:", error.code)
-      console.log("❌ Error Name:", error.name)
-      console.log("❌ Full Error:", error)
       throw error
     }
-    console.log("Has User:", !!data?.user)
-    console.log("Has Session:", !!data?.session)
-    console.log("═══════════════════════════════════════\n")
 
     if (!data?.user) {
-      throw new Error("Signup succeeded but no user was returned")
+      throw new Error("Sign up succeeded but no user was returned")
     }
-
-    console.log("✅ [AUTH-CONTEXT] Signup successful!")
-    console.log("User ID:", data.user?.id)
-    console.log("Email:", data.user?.email)
-    console.log("\n")
   }
 
   const signInWithEmail = async (email: string, password: string) => {
-    console.log("\n═══════════════════════════════════════")
-    console.log("🔵 SIGNIN ATTEMPT STARTED")
-    console.log("═══════════════════════════════════════")
-    console.log("📧 Email:", email)
-    console.log("⏰ Timestamp:", new Date().toISOString())
-    console.log("\n📤 Calling signInWithPassword...\n")
+    ensureAuthConfigured()
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
 
-    console.log("\n📊 [AUTH-CONTEXT] Supabase Response:")
-    console.log("═══════════════════════════════════════")
-    console.log("Has Error:", !!error)
     if (error) {
-      console.log("❌ Error Message:", error.message)
-      console.log("❌ Error Status:", error.status)
-      console.log("❌ Error Code:", error.code)
-      console.log("❌ Error Name:", error.name)
       throw error
     }
-    console.log("Has User:", !!data?.user)
-    console.log("Has Session:", !!data?.session)
-    console.log("═══════════════════════════════════════\n")
 
     if (!data?.user) {
       throw new Error("Sign in succeeded but no user was returned")
     }
-
-    console.log("✅ [AUTH-CONTEXT] Sign in successful!")
-    console.log("User ID:", data.user?.id)
-    console.log("Email:", data.user?.email)
-    console.log("\n")
   }
 
   const signOut = async () => {
+    ensureAuthConfigured()
+
     const { error } = await supabase.auth.signOut()
     if (error) {
-      console.error("Sign out error:", error)
       throw error
     }
   }
 
   const signInWithGoogle = async () => {
+    ensureAuthConfigured()
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: {
+          prompt: "select_account",
+        },
       },
     })
+
     if (error) {
-      console.error("Google sign in error:", error)
       throw error
     }
   }

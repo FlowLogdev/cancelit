@@ -1,22 +1,33 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 
-import { AuthProvider } from "@/lib/auth-context"
-import { Toaster } from "@/components/ui/toaster"
 import { ResizeObserverFix } from "@/components/resizeobserver-fix"
+import { Toaster } from "@/components/ui/toaster"
+import { AuthProvider } from "@/lib/auth-context"
 
-const inter = Inter({
+const geist = Geist({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+  variable: "--font-geist-sans",
+})
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
 })
 
 export const metadata: Metadata = {
-  title: "CancelIt — Find & Cancel Forgotten Subscriptions",
+  title: "CancelIt | Find and manage recurring charges",
   description:
-    "Connect your bank, discover every subscription draining your money, and cancel them in seconds. The average user saves $240/year with CancelIt.",
+    "Connect a bank account through Plaid, discover recurring payments, and manage subscriptions from a secure web dashboard.",
   keywords: "cancel subscriptions, find subscriptions, subscription tracker, stop recurring charges",
+  openGraph: {
+    title: "CancelIt",
+    description: "Find and manage recurring charges before they renew.",
+    type: "website",
+    url: "https://cancelit.app",
+  },
 }
 
 export default function RootLayout({
@@ -26,7 +37,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className={inter.className}>
+      <body className={`${geist.variable} ${geistMono.variable} font-sans`}>
         <AuthProvider>
           <ResizeObserverFix />
           {children}

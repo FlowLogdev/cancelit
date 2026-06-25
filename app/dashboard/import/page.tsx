@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,10 +16,13 @@ export default function ImportPage() {
   const [importStep, setImportStep] = useState(1)
   const [progress, setProgress] = useState(25)
 
-  if (!user) {
-    router.push("/")
-    return null
-  }
+  useEffect(() => {
+    if (!user) {
+      router.push("/")
+    }
+  }, [router, user])
+
+  if (!user) return null
 
   const steps = [
     { id: 1, title: "Connect Bank Account", description: "Securely link your financial accounts" },
@@ -234,7 +237,7 @@ export default function ImportPage() {
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
-              <CardTitle>Setup Complete! 🎉</CardTitle>
+              <CardTitle>Setup complete</CardTitle>
               <CardDescription>
                 Your subscriptions have been imported and you're ready to start managing them
               </CardDescription>

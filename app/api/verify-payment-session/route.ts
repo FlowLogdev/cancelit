@@ -2,12 +2,16 @@ import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-12-18.acacia",
-})
-
 export async function POST(request: Request) {
   try {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return NextResponse.json({ error: "Stripe is not configured" }, { status: 500 })
+    }
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2024-12-18.acacia",
+    })
+
     const supabase = await createClient()
 
     const {
@@ -41,12 +45,13 @@ export async function POST(request: Request) {
     const { error: updateError } = await supabase
       .from("customers")
       .update({
+        stripe_customer_id: typeof session.customer === "string" ? session.customer : session.customer?.id,
         stripe_subscription_id: subscription.id,
         subscription_tier: session.metadata?.plan_id || session.metadata?.plan_name || "basic",
         subscription_status: subscription.status,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", user.id)
+      .eq("user_id", user.id)
 
     if (updateError) {
       console.error("Error updating customer subscription:", updateError)

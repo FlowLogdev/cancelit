@@ -179,7 +179,7 @@ export default function SignUpPage() {
             <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
               <CheckCircle2 className="h-8 w-8 text-green-600" />
             </div>
-            <CardTitle className="text-2xl font-bold text-gray-900">Welcome to CancelIt! 🎉</CardTitle>
+            <CardTitle className="text-2xl font-bold text-gray-900">Welcome to CancelIt</CardTitle>
             <CardDescription className="text-base">
               Your account has been created for <strong>{email}</strong>
             </CardDescription>
@@ -359,17 +359,17 @@ export default function SignUpPage() {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-gray-300" />
+                <span className="w-full border-t border-white/10" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                <span className="px-2 bg-[#0F0F0F] text-white/45">Or continue with</span>
               </div>
             </div>
 
             <Button
               type="button"
               variant="outline"
-              className="w-full py-6 border-2 hover:bg-gray-50 transition-colors bg-transparent"
+              className="w-full py-6 border-white/15 bg-white/[0.03] text-white hover:bg-white/[0.08] hover:text-white transition-colors"
               onClick={handleGoogleSignUp}
               disabled={isGoogleLoading || isLoading}
             >
@@ -405,20 +405,20 @@ export default function SignUpPage() {
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4">
-            <div className="text-center text-sm text-gray-600">
+            <div className="text-center text-sm text-white/50">
               Already have an account?{" "}
-              <Link href="/signin" className="text-blue-600 hover:text-blue-800 font-semibold transition-colors">
+              <Link href="/signin" className="text-red-400 hover:text-red-300 font-semibold transition-colors">
                 Sign in
               </Link>
             </div>
 
-            <p className="text-xs text-center text-gray-500">
+            <p className="text-xs text-center text-white/40">
               By signing up, you agree to our{" "}
-              <Link href="/terms" className="text-blue-600 hover:text-blue-800">
+              <Link href="/terms" className="text-red-400 hover:text-red-300">
                 Terms of Service
               </Link>{" "}
               and{" "}
-              <Link href="/privacy" className="text-blue-600 hover:text-blue-800">
+              <Link href="/privacy" className="text-red-400 hover:text-red-300">
                 Privacy Policy
               </Link>
             </p>

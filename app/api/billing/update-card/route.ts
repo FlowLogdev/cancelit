@@ -2,12 +2,16 @@ import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-12-18.acacia",
-})
-
 export async function POST() {
   try {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return NextResponse.json({ error: "Stripe is not configured" }, { status: 500 })
+    }
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2024-12-18.acacia",
+    })
+
     const supabase = await createClient()
 
     const {
@@ -23,7 +27,7 @@ export async function POST() {
     const { data: customer, error: customerError } = await supabase
       .from("customers")
       .select("stripe_customer_id")
-      .eq("id", user.id)
+      .eq("user_id", user.id)
       .single()
 
     if (customerError || !customer?.stripe_customer_id) {

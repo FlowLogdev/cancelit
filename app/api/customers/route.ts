@@ -14,7 +14,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { data: customer, error } = await supabase.from("customers").select("*").eq("id", user.id).single()
+    const { data: customer, error } = await supabase.from("customers").select("*").eq("user_id", user.id).single()
 
     if (error) {
       console.error("Error fetching customer:", error)
@@ -52,7 +52,7 @@ export async function PUT(request: Request) {
         payment_method,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", user.id)
+      .eq("user_id", user.id)
       .select()
       .single()
 

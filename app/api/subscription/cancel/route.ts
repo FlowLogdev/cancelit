@@ -2,12 +2,16 @@ import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-12-18.acacia",
-})
-
 export async function POST(request: Request) {
   try {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return NextResponse.json({ error: "Stripe is not configured" }, { status: 500 })
+    }
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2024-12-18.acacia",
+    })
+
     const supabase = await createClient()
 
     const {
@@ -31,7 +35,7 @@ export async function POST(request: Request) {
     const { data: customer, error: customerError } = await supabase
       .from("customers")
       .select("stripe_subscription_id, stripe_customer_id")
-      .eq("id", user.id)
+      .eq("user_id", user.id)
       .single()
 
     if (customerError || !customer?.stripe_subscription_id) {
@@ -50,7 +54,7 @@ export async function POST(request: Request) {
         subscription_status: "canceling",
         updated_at: new Date().toISOString(),
       })
-      .eq("id", user.id)
+      .eq("user_id", user.id)
 
     return NextResponse.json({
       success: true,

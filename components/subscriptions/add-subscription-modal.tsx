@@ -1,23 +1,20 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { addMonths, addWeeks, addYears, formatISO } from "date-fns"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { addMonths, addYears, formatISO } from "date-fns"
 import { toast } from "@/hooks/use-toast"
 import { createClient } from "@/lib/supabase/client"
 import type { Database } from "@/lib/database.types"
 
-/**
- * Schema for a new subscription.
- */
 const schema = z.object({
   name: z.string().min(2, "Name is too short"),
-  amount: z.coerce.number().positive(),
-  interval: z.enum(["monthly", "yearly"]),
+  cost: z.coerce.number().positive("Amount must be greater than zero"),
+  billing_cycle: z.enum(["weekly", "monthly", "yearly"]),
   first_billed_at: z.coerce.date(),
 })
 
@@ -29,6 +26,12 @@ interface AddSubscriptionModalProps {
   onSuccess?: () => void
 }
 
+function getNextBillingDate(firstBilledAt: Date, billingCycle: NewSubscription["billing_cycle"]) {
+  if (billingCycle === "weekly") return addWeeks(firstBilledAt, 1)
+  if (billingCycle === "yearly") return addYears(firstBilledAt, 1)
+  return addMonths(firstBilledAt, 1)
+}
+
 export function AddSubscriptionModal({ open, onOpenChange, onSuccess }: AddSubscriptionModalProps) {
   const supabase = createClient<Database>()
   const [internalOpen, setInternalOpen] = useState(false)
@@ -37,11 +40,10 @@ export function AddSubscriptionModal({ open, onOpenChange, onSuccess }: AddSubsc
   const isOpen = open !== undefined ? open : internalOpen
   const setIsOpen = onOpenChange || setInternalOpen
 
-  // Local form state
   const [form, setForm] = useState<NewSubscription>({
     name: "",
-    amount: 0,
-    interval: "monthly",
+    cost: 0,
+    billing_cycle: "monthly",
     first_billed_at: new Date(),
   })
 
@@ -55,19 +57,35 @@ export function AddSubscriptionModal({ open, onOpenChange, onSuccess }: AddSubsc
       toast({
         variant: "destructive",
         title: "Validation error",
-        description: parsed.error.errors.map((e) => e.message).join(", "),
+        description: parsed.error.errors.map((error) => error.message).join(", "),
       })
       return
     }
 
     startTransition(async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: "Sign in required",
+          description: "Please sign in before adding subscriptions.",
+        })
+        return
+      }
+
+      const nextBillingDate = getNextBillingDate(parsed.data.first_billed_at, parsed.data.billing_cycle)
+
       const { error } = await supabase.from("subscriptions").insert({
-        ...parsed.data,
-        next_billing_at: formatISO(
-          parsed.data.interval === "monthly"
-            ? addMonths(parsed.data.first_billed_at, 1)
-            : addYears(parsed.data.first_billed_at, 1),
-        ),
+        user_id: user.id,
+        name: parsed.data.name,
+        cost: parsed.data.cost,
+        amount: parsed.data.cost,
+        billing_cycle: parsed.data.billing_cycle,
+        next_billing_date: formatISO(nextBillingDate, { representation: "date" }),
+        status: "active",
       })
 
       if (error) {
@@ -76,58 +94,53 @@ export function AddSubscriptionModal({ open, onOpenChange, onSuccess }: AddSubsc
           title: "Something went wrong",
           description: error.message,
         })
-      } else {
-        toast({ title: "Subscription added" })
-        setIsOpen(false)
-        if (onSuccess) {
-          onSuccess()
-        }
+        return
       }
+
+      toast({ title: "Subscription added" })
+      setIsOpen(false)
+      onSuccess?.()
     })
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">Add Subscription</Button>
+        <Button size="sm">Add subscription</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add New Subscription</DialogTitle>
+          <DialogTitle>Add subscription</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              placeholder="Netflix"
-              value={form.name}
-              onChange={(e) => updateField("name", e.target.value)}
-            />
+            <Input id="name" placeholder="Netflix" value={form.name} onChange={(e) => updateField("name", e.target.value)} />
           </div>
 
           <div className="flex gap-4">
             <div className="flex-1 space-y-2">
-              <Label htmlFor="amount">Amount</Label>
+              <Label htmlFor="cost">Amount</Label>
               <Input
-                id="amount"
+                id="cost"
                 type="number"
                 step="0.01"
                 placeholder="9.99"
-                value={form.amount}
-                onChange={(e) => updateField("amount", e.target.value)}
+                value={form.cost}
+                onChange={(e) => updateField("cost", Number(e.target.value))}
               />
             </div>
 
             <div className="flex-1 space-y-2">
-              <Label htmlFor="interval">Interval</Label>
+              <Label htmlFor="billing_cycle">Interval</Label>
               <select
-                id="interval"
-                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none"
-                value={form.interval}
-                onChange={(e) => updateField("interval", e.target.value as NewSubscription["interval"])}
+                id="billing_cycle"
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none"
+                value={form.billing_cycle}
+                onChange={(e) => updateField("billing_cycle", e.target.value as NewSubscription["billing_cycle"])}
               >
+                <option value="weekly">Weekly</option>
                 <option value="monthly">Monthly</option>
                 <option value="yearly">Yearly</option>
               </select>
@@ -147,7 +160,7 @@ export function AddSubscriptionModal({ open, onOpenChange, onSuccess }: AddSubsc
 
         <div className="flex justify-end pt-2">
           <Button disabled={loading} onClick={submit}>
-            {loading ? "Saving…" : "Save"}
+            {loading ? "Saving..." : "Save"}
           </Button>
         </div>
       </DialogContent>

@@ -1,207 +1,284 @@
--- Enable necessary extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+create extension if not exists "uuid-ossp";
 
--- Create customers table
-CREATE TABLE IF NOT EXISTS public.customers (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  email VARCHAR(255) UNIQUE NOT NULL,
-  full_name VARCHAR(255),
-  avatar_url TEXT,
-  phone VARCHAR(50),
-  address TEXT,
-  city VARCHAR(100),
-  state VARCHAR(100),
-  zip VARCHAR(20),
-  email_confirmed_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+create table if not exists public.customers (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid not null unique references auth.users(id) on delete cascade,
+  email text not null,
+  full_name text,
+  avatar_url text,
+  phone text,
+  billing_address jsonb,
+  payment_method jsonb,
+  stripe_customer_id text,
+  stripe_subscription_id text,
+  subscription_tier text default 'free',
+  subscription_status text not null default 'free',
+  email_confirmed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
--- Create subscriptions table
-CREATE TABLE IF NOT EXISTS public.subscriptions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    customer_id UUID REFERENCES public.customers(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    amount DECIMAL(10,2) NOT NULL,
-    currency VARCHAR(3) DEFAULT 'USD',
-    billing_cycle VARCHAR(20) NOT NULL CHECK (billing_cycle IN ('monthly', 'yearly', 'weekly', 'daily')),
-    next_billing_date DATE,
-    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'cancelled', 'paused', 'expired')),
-    category VARCHAR(100),
-    website_url TEXT,
-    logo_url TEXT,
-    notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+create table if not exists public.subscriptions (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  amount numeric(10,2),
+  cost numeric(10,2),
+  billing_cycle text not null check (billing_cycle in ('weekly', 'monthly', 'yearly')),
+  next_billing_date date not null,
+  status text not null default 'active' check (status in ('active', 'cancelled', 'paused', 'expired')),
+  category text,
+  description text,
+  website_url text,
+  logo_url text,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint subscriptions_positive_amount check (coalesce(amount, cost, 0) > 0)
 );
 
--- Create profiles table
-CREATE TABLE IF NOT EXISTS public.profiles (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
-    email TEXT NOT NULL,
-    full_name TEXT,
-    avatar_url TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+create table if not exists public.plaid_items (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  item_id text not null unique,
+  access_token text not null,
+  institution_id text,
+  institution_name text,
+  status text not null default 'active',
+  error_message text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
--- Create plaid_accounts table
-CREATE TABLE IF NOT EXISTS public.plaid_accounts (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  customer_id UUID REFERENCES public.customers(id) ON DELETE CASCADE,
-  access_token TEXT NOT NULL,
-  item_id TEXT NOT NULL,
-  institution_name VARCHAR(255),
-  institution_id VARCHAR(255),
-  account_name VARCHAR(255),
-  account_type VARCHAR(50),
-  account_subtype VARCHAR(50),
-  mask VARCHAR(10),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+create table if not exists public.plaid_accounts (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  item_id text not null references public.plaid_items(item_id) on delete cascade,
+  account_id text not null,
+  account_name text,
+  account_mask text,
+  account_type text,
+  account_subtype text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, account_id)
 );
 
--- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_customers_email ON public.customers(email);
-CREATE INDEX IF NOT EXISTS idx_customers_created_at ON public.customers(created_at);
-CREATE INDEX IF NOT EXISTS idx_subscriptions_customer_id ON public.subscriptions(customer_id);
-CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON public.subscriptions(status);
-CREATE INDEX IF NOT EXISTS idx_plaid_accounts_customer_id ON public.plaid_accounts(customer_id);
-CREATE INDEX IF NOT EXISTS subscriptions_user_id_idx ON public.subscriptions(user_id);
-CREATE INDEX IF NOT EXISTS subscriptions_next_billing_date_idx ON public.subscriptions(next_billing_date);
-CREATE INDEX IF NOT EXISTS subscriptions_status_idx ON public.subscriptions(status);
-CREATE INDEX IF NOT EXISTS profiles_user_id_idx ON public.profiles(user_id);
+create table if not exists public.plaid_transactions (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  account_id text not null,
+  transaction_id text not null unique,
+  amount numeric(10,2) not null,
+  date date not null,
+  name text not null,
+  merchant_name text,
+  category text[],
+  is_subscription boolean not null default false,
+  subscription_id uuid references public.subscriptions(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 
--- Enable Row Level Security
-ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.plaid_accounts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.profiles ENABLE ROW LEVEL SECURITY;
+create table if not exists public.profiles (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid not null unique references auth.users(id) on delete cascade,
+  email text not null,
+  full_name text,
+  avatar_url text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 
--- Drop existing policies if they exist
-DROP POLICY IF EXISTS "Users can view own customer data" ON public.customers;
-DROP POLICY IF EXISTS "Users can update own customer data" ON public.customers;
-DROP POLICY IF EXISTS "Users can insert own customer data" ON public.customers;
-DROP POLICY IF EXISTS "Service role can manage all customer data" ON public.customers;
+create or replace function public.sync_subscription_amounts()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.amount is null and new.cost is not null then
+    new.amount := new.cost;
+  end if;
 
-DROP POLICY IF EXISTS "Users can view own subscriptions" ON public.subscriptions;
-DROP POLICY IF EXISTS "Users can manage own subscriptions" ON public.subscriptions;
-DROP POLICY IF EXISTS "Service role can manage all subscriptions" ON public.subscriptions;
+  if new.cost is null and new.amount is not null then
+    new.cost := new.amount;
+  end if;
 
-DROP POLICY IF EXISTS "Users can view own plaid accounts" ON public.plaid_accounts;
-DROP POLICY IF EXISTS "Users can manage own plaid accounts" ON public.plaid_accounts;
-DROP POLICY IF EXISTS "Service role can manage all plaid accounts" ON public.plaid_accounts;
+  return new;
+end;
+$$;
 
-DROP POLICY IF EXISTS "Users can view own subscriptions" ON public.subscriptions;
-DROP POLICY IF EXISTS "Users can insert own subscriptions" ON public.subscriptions;
-DROP POLICY IF EXISTS "Users can update own subscriptions" ON public.subscriptions;
-DROP POLICY IF EXISTS "Users can delete own subscriptions" ON public.subscriptions;
+create or replace function public.handle_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
 
-DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
-DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
-DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (user_id, email, full_name)
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', split_part(new.email, '@', 1))
+  )
+  on conflict (user_id) do update
+  set email = excluded.email,
+      full_name = coalesce(public.profiles.full_name, excluded.full_name),
+      updated_at = now();
 
--- Create RLS policies for customers
-CREATE POLICY "Users can view own customer data" ON public.customers
-  FOR SELECT USING (auth.uid() = id);
+  insert into public.customers (user_id, email, full_name, email_confirmed_at)
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+    new.email_confirmed_at
+  )
+  on conflict (user_id) do update
+  set email = excluded.email,
+      full_name = coalesce(public.customers.full_name, excluded.full_name),
+      email_confirmed_at = excluded.email_confirmed_at,
+      updated_at = now();
 
-CREATE POLICY "Users can update own customer data" ON public.customers
-  FOR UPDATE USING (auth.uid() = id);
+  return new;
+end;
+$$;
 
-CREATE POLICY "Users can insert own customer data" ON public.customers
-  FOR INSERT WITH CHECK (auth.uid() = id);
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
 
-CREATE POLICY "Service role can manage all customer data" ON public.customers
-  FOR ALL USING (auth.role() = 'service_role');
+drop trigger if exists subscriptions_sync_amounts on public.subscriptions;
+create trigger subscriptions_sync_amounts
+  before insert or update on public.subscriptions
+  for each row execute function public.sync_subscription_amounts();
 
--- Create RLS policies for subscriptions
-CREATE POLICY "Users can view own subscriptions" ON public.subscriptions
-  FOR SELECT USING (auth.uid() = customer_id);
+drop trigger if exists customers_updated_at on public.customers;
+create trigger customers_updated_at
+  before update on public.customers
+  for each row execute function public.handle_updated_at();
 
-CREATE POLICY "Users can manage own subscriptions" ON public.subscriptions
-  FOR ALL USING (auth.uid() = customer_id);
+drop trigger if exists subscriptions_updated_at on public.subscriptions;
+create trigger subscriptions_updated_at
+  before update on public.subscriptions
+  for each row execute function public.handle_updated_at();
 
-CREATE POLICY "Service role can manage all subscriptions" ON public.subscriptions
-  FOR ALL USING (auth.role() = 'service_role');
+drop trigger if exists profiles_updated_at on public.profiles;
+create trigger profiles_updated_at
+  before update on public.profiles
+  for each row execute function public.handle_updated_at();
 
--- Create RLS policies for profiles
-CREATE POLICY "Users can view own profile" ON public.profiles
-    FOR SELECT USING (auth.uid() = user_id);
+drop trigger if exists plaid_items_updated_at on public.plaid_items;
+create trigger plaid_items_updated_at
+  before update on public.plaid_items
+  for each row execute function public.handle_updated_at();
 
-CREATE POLICY "Users can insert own profile" ON public.profiles
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+drop trigger if exists plaid_accounts_updated_at on public.plaid_accounts;
+create trigger plaid_accounts_updated_at
+  before update on public.plaid_accounts
+  for each row execute function public.handle_updated_at();
 
-CREATE POLICY "Users can update own profile" ON public.profiles
-    FOR UPDATE USING (auth.uid() = user_id);
+drop trigger if exists plaid_transactions_updated_at on public.plaid_transactions;
+create trigger plaid_transactions_updated_at
+  before update on public.plaid_transactions
+  for each row execute function public.handle_updated_at();
 
--- Create RLS policies for plaid_accounts
-CREATE POLICY "Users can view own plaid accounts" ON public.plaid_accounts
-  FOR SELECT USING (auth.uid() = customer_id);
+alter table public.customers enable row level security;
+alter table public.subscriptions enable row level security;
+alter table public.profiles enable row level security;
+alter table public.plaid_items enable row level security;
+alter table public.plaid_accounts enable row level security;
+alter table public.plaid_transactions enable row level security;
 
-CREATE POLICY "Users can manage own plaid accounts" ON public.plaid_accounts
-  FOR ALL USING (auth.uid() = customer_id);
+drop policy if exists "Customers can read own record" on public.customers;
+drop policy if exists "Customers can update own record" on public.customers;
+drop policy if exists "Customers can insert own record" on public.customers;
+drop policy if exists "Subscriptions belong to user" on public.subscriptions;
+drop policy if exists "Profiles belong to user" on public.profiles;
+drop policy if exists "Plaid items belong to user" on public.plaid_items;
+drop policy if exists "Plaid accounts belong to user" on public.plaid_accounts;
+drop policy if exists "Plaid transactions belong to user" on public.plaid_transactions;
 
-CREATE POLICY "Service role can manage all plaid accounts" ON public.plaid_accounts
-  FOR ALL USING (auth.role() = 'service_role');
+create policy "Customers can read own record"
+  on public.customers for select
+  to authenticated
+  using ((select auth.uid()) = user_id);
 
--- Create function to automatically create profile on user signup
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-    INSERT INTO public.profiles (user_id, email, full_name)
-    VALUES (
-        NEW.id,
-        NEW.email,
-        COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1))
-    );
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+create policy "Customers can update own record"
+  on public.customers for update
+  to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
--- Create trigger to automatically create profile on user signup
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-    AFTER INSERT ON auth.users
-    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+create policy "Customers can insert own record"
+  on public.customers for insert
+  to authenticated
+  with check ((select auth.uid()) = user_id);
 
--- Create function to update updated_at timestamp
-CREATE OR REPLACE FUNCTION public.handle_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+create policy "Subscriptions belong to user"
+  on public.subscriptions for all
+  to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
--- Create triggers to automatically update updated_at
-DROP TRIGGER IF EXISTS subscriptions_updated_at ON public.subscriptions;
-CREATE TRIGGER subscriptions_updated_at
-    BEFORE UPDATE ON public.subscriptions
-    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+create policy "Profiles belong to user"
+  on public.profiles for all
+  to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
-DROP TRIGGER IF EXISTS profiles_updated_at ON public.profiles;
-CREATE TRIGGER profiles_updated_at
-    BEFORE UPDATE ON public.profiles
-    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+create policy "Plaid items belong to user"
+  on public.plaid_items for all
+  to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
-DROP TRIGGER IF EXISTS plaid_accounts_updated_at ON public.plaid_accounts;
-CREATE TRIGGER plaid_accounts_updated_at
-    BEFORE UPDATE ON public.plaid_accounts
-    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+create policy "Plaid accounts belong to user"
+  on public.plaid_accounts for all
+  to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
--- Grant permissions
-GRANT SELECT, INSERT, UPDATE ON public.customers TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.subscriptions TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.plaid_accounts TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.profiles TO authenticated;
+create policy "Plaid transactions belong to user"
+  on public.plaid_transactions for all
+  to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
-GRANT ALL ON public.customers TO service_role;
-GRANT ALL ON public.subscriptions TO service_role;
-GRANT ALL ON public.plaid_accounts TO service_role;
-GRANT ALL ON public.profiles TO service_role;
+create index if not exists customers_user_id_idx on public.customers(user_id);
+create index if not exists customers_email_idx on public.customers(email);
+create index if not exists customers_stripe_customer_id_idx on public.customers(stripe_customer_id);
+create index if not exists subscriptions_user_id_idx on public.subscriptions(user_id);
+create index if not exists subscriptions_status_idx on public.subscriptions(status);
+create index if not exists subscriptions_next_billing_date_idx on public.subscriptions(next_billing_date);
+create index if not exists profiles_user_id_idx on public.profiles(user_id);
+create index if not exists plaid_items_user_id_idx on public.plaid_items(user_id);
+create index if not exists plaid_items_item_id_idx on public.plaid_items(item_id);
+create index if not exists plaid_accounts_user_id_idx on public.plaid_accounts(user_id);
+create index if not exists plaid_transactions_user_id_idx on public.plaid_transactions(user_id);
 
--- Grant usage on sequences
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO authenticated;
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO service_role;
+grant select, insert, update on public.customers to authenticated;
+grant select, insert, update, delete on public.subscriptions to authenticated;
+grant select, insert, update on public.profiles to authenticated;
+grant select, insert, update, delete on public.plaid_items to authenticated;
+grant select, insert, update, delete on public.plaid_accounts to authenticated;
+grant select, insert, update, delete on public.plaid_transactions to authenticated;
+
+grant all on public.customers to service_role;
+grant all on public.subscriptions to service_role;
+grant all on public.profiles to service_role;
+grant all on public.plaid_items to service_role;
+grant all on public.plaid_accounts to service_role;
+grant all on public.plaid_transactions to service_role;
+
+grant usage on all sequences in schema public to authenticated;
+grant usage on all sequences in schema public to service_role;
