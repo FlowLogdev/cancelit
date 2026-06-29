@@ -40,6 +40,8 @@ export async function POST(request: Request) {
     }
 
     const subscription = session.subscription as Stripe.Subscription
+    const planId = session.metadata?.plan_id || subscription.metadata?.plan_id || "minimum"
+    const planName = session.metadata?.plan_name || subscription.metadata?.plan_name || "Minimum"
 
     // Update customer record with subscription info
     const { error: updateError } = await supabase
@@ -47,7 +49,7 @@ export async function POST(request: Request) {
       .update({
         stripe_customer_id: typeof session.customer === "string" ? session.customer : session.customer?.id,
         stripe_subscription_id: subscription.id,
-        subscription_tier: session.metadata?.plan_id || session.metadata?.plan_name || "basic",
+        subscription_tier: planId,
         subscription_status: subscription.status,
         updated_at: new Date().toISOString(),
       })
@@ -60,11 +62,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
+      planName,
+      customerEmail: session.customer_details?.email || user.email,
+      amount: session.amount_total,
       subscription: {
         id: subscription.id,
         status: subscription.status,
-        tier: session.metadata?.plan_name || "Pro",
-        amount: session.amount_total,
+        tier: planId,
       },
     })
   } catch (error: any) {

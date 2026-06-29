@@ -109,6 +109,50 @@ export interface Database {
           updated_at?: string
         }
       }
+      cancellation_requests: {
+        Row: {
+          id: string
+          user_id: string
+          subscription_id: string
+          subscription_name: string
+          status: string
+          cancellation_url: string | null
+          instructions: string[]
+          customer_notes: string | null
+          support_notes: string | null
+          completed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          subscription_id: string
+          subscription_name: string
+          status?: string
+          cancellation_url?: string | null
+          instructions?: string[]
+          customer_notes?: string | null
+          support_notes?: string | null
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          subscription_id?: string
+          subscription_name?: string
+          status?: string
+          cancellation_url?: string | null
+          instructions?: string[]
+          customer_notes?: string | null
+          support_notes?: string | null
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       plaid_items: {
         Row: {
           id: string

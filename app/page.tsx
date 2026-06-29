@@ -10,40 +10,39 @@ import {
   LockKeyhole,
   ReceiptText,
   ShieldCheck,
-  Sparkles,
   TrendingDown,
   WalletCards,
 } from "lucide-react"
 import Link from "next/link"
 
 const stats = [
-  { value: "$237", label: "average annual waste found" },
-  { value: "90 sec", label: "typical bank connection" },
-  { value: "Read-only", label: "Plaid bank access" },
+  { value: "$18.74", label: "one small charge people miss" },
+  { value: "6 mo", label: "history reviewed on first scan" },
+  { value: "Read-only", label: "bank access through Plaid" },
 ]
 
 const subscriptions = [
-  { name: "Netflix", amount: "$22.99", cadence: "monthly", status: "active" },
-  { name: "Adobe Creative Cloud", amount: "$59.99", cadence: "monthly", status: "review" },
-  { name: "Dropbox", amount: "$11.99", cadence: "monthly", status: "duplicate" },
-  { name: "Peacock", amount: "$7.99", cadence: "monthly", status: "unused" },
+  { name: "Adobe Creative Cloud", amount: "$59.99", cadence: "renews Jan 28", status: "review first" },
+  { name: "Dropbox", amount: "$11.99", cadence: "renews Feb 02", status: "duplicate" },
+  { name: "Peacock", amount: "$7.99", cadence: "renews Feb 07", status: "cancel path found" },
+  { name: "Spotify", amount: "$10.99", cadence: "renews Feb 11", status: "keep" },
 ]
 
 const features = [
   {
     icon: <Landmark className="h-5 w-5" />,
-    title: "Plaid-powered discovery",
-    description: "Connect checking and card accounts, then let CancelIt find recurring charges from transaction history.",
+    title: "Bank scan without bank credentials",
+    description: "Plaid gives CancelIt read-only transaction data so customers can spot recurring card and bank charges.",
   },
   {
     icon: <ReceiptText className="h-5 w-5" />,
-    title: "Subscription tracker",
-    description: "Track cost, renewal date, status, category, and notes from one quiet dashboard.",
+    title: "A real cancellation queue",
+    description: "Customers can request cancellation, see the next step, and keep the status with the subscription record.",
   },
   {
     icon: <BellRing className="h-5 w-5" />,
     title: "Renewal warnings",
-    description: "Get ahead of upcoming renewals before a trial or forgotten plan charges again.",
+    description: "Renewal dates are sorted by urgency so customers review the next charge before it happens.",
   },
   {
     icon: <ShieldCheck className="h-5 w-5" />,
@@ -56,21 +55,21 @@ const plans = [
   {
     name: "Minimum",
     price: "$4.99",
-    description: "For getting control of a personal subscription list.",
-    features: ["10 tracked subscriptions", "Email reminders", "Basic spending view"],
+    description: "For a short personal list.",
+    features: ["10 tracked subscriptions", "Plaid scan up to 10", "Basic reminders"],
   },
   {
     name: "Medium",
     price: "$9.99",
     description: "For households and heavy app users.",
-    features: ["50 tracked subscriptions", "Plaid bank scan", "Exportable reports"],
+    features: ["50 Plaid-detected subscriptions", "Savings assistant", "Cancellation guidance"],
     highlighted: true,
   },
   {
     name: "Maximum",
     price: "$19.99",
     description: "For power users and small teams.",
-    features: ["Unlimited tracking", "Advanced insights", "Priority support"],
+    features: ["Unlimited tracking", "Priority cancellation support", "Advanced reporting"],
   },
 ]
 
@@ -125,26 +124,25 @@ export default function Home() {
         </div>
       </nav>
 
-      <section className="relative z-10 mx-auto grid min-h-[calc(100dvh-4rem)] max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.04fr_0.96fr] lg:py-20">
+      <section className="relative z-10 mx-auto grid min-h-[calc(100dvh-4rem)] max-w-7xl items-center gap-12 px-4 pb-20 pt-14 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:pb-24 lg:pt-16">
         <div>
-          <div className="mb-7 inline-flex items-center gap-2 rounded-md border border-red-400/20 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-200">
-            <Sparkles className="h-3.5 w-3.5" />
-            Pay only for the plan you use. Upgrade when the scan pays for itself.
+          <div className="mb-7 inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.045] px-3 py-1.5 text-sm font-medium text-white/62">
+            Subscription audit for cards and bank accounts
           </div>
 
           <h1 className="max-w-4xl text-balance text-5xl font-black leading-[0.98] tracking-tight sm:text-6xl lg:text-7xl">
-            Find the quiet charges hiding in your bank account.
+            Stop paying for services you forgot were still billing.
           </h1>
 
           <p className="mt-6 max-w-2xl text-pretty text-lg leading-8 text-white/58">
-            CancelIt connects through Plaid, detects recurring payments, and gives customers a clear web dashboard to
-            keep, pause, or cancel every subscription they no longer need.
+            CancelIt turns recurring transactions into a working list: what renews next, what costs the most, and what
+            needs a cancellation request before another charge posts.
           </p>
 
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <Link href="/signup">
               <Button size="lg" className="h-12 gap-2 bg-red-500 px-7 font-semibold text-white hover:bg-red-600">
-                Connect and scan <ArrowRight className="h-4 w-4" />
+                Start the audit <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
             <Link href="/pricing">
@@ -153,7 +151,7 @@ export default function Home() {
                 variant="outline"
                 className="h-12 border-white/15 bg-white/[0.04] px-7 text-white hover:bg-white/[0.08]"
               >
-                View web plans
+                Compare plans
               </Button>
             </Link>
           </div>
@@ -170,14 +168,14 @@ export default function Home() {
 
         <div className="relative">
           <div className="absolute -inset-6 -z-10 rounded-[2rem] bg-red-500/10 blur-3xl" />
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#111]/92 shadow-2xl shadow-red-950/20">
+          <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0b0b0b]/95 shadow-2xl shadow-black/70">
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
               <div>
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-red-300">Live scan</p>
-                <h2 className="mt-1 text-xl font-semibold">Recurring charges</h2>
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-white/34">Sample dashboard</p>
+                <h2 className="mt-1 text-xl font-semibold">Review queue</h2>
               </div>
-              <div className="rounded-md bg-emerald-400/10 px-2.5 py-1 text-xs font-medium text-emerald-200">
-                4 found
+              <div className="rounded-md bg-red-500/12 px-2.5 py-1 text-xs font-medium text-red-200">
+                $90.96/mo
               </div>
             </div>
 
@@ -189,11 +187,11 @@ export default function Home() {
                       <span className="font-medium">{item.name}</span>
                       <span className="rounded bg-white/8 px-1.5 py-0.5 text-[11px] text-white/50">{item.status}</span>
                     </div>
-                    <p className="mt-1 text-sm text-white/42">{item.cadence} billing</p>
+                    <p className="mt-1 text-sm text-white/42">{item.cadence}</p>
                   </div>
                   <div className="text-right">
                     <p className="font-semibold tabular-nums">{item.amount}</p>
-                    <p className="mt-1 text-xs text-red-200">review</p>
+                    <p className="mt-1 text-xs text-red-200">action</p>
                   </div>
                 </div>
               ))}
@@ -201,9 +199,9 @@ export default function Home() {
 
             <div className="grid grid-cols-3 border-t border-white/10">
               {[
-                { label: "Monthly", value: "$102.96" },
-                { label: "Annual", value: "$1,235.52" },
-                { label: "Potential cut", value: "$431.88" },
+                { label: "Monthly", value: "$90.96" },
+                { label: "Annual", value: "$1,091.52" },
+                { label: "Review first", value: "$79.97" },
               ].map((item) => (
                 <div key={item.label} className="p-4">
                   <p className="text-xs text-white/38">{item.label}</p>
@@ -221,17 +219,17 @@ export default function Home() {
             {
               icon: <CreditCard className="h-5 w-5" />,
               title: "1. Connect",
-              text: "Customers link a bank or card account through Plaid with read-only access.",
+              text: "Customers link a bank or card account through Plaid. CancelIt never receives bank login details.",
             },
             {
               icon: <TrendingDown className="h-5 w-5" />,
-              title: "2. Detect",
-              text: "CancelIt groups recurring merchants and highlights waste, duplicates, and upcoming renewals.",
+              title: "2. Sort",
+              text: "Recurring merchants are ranked by cost, renewal date, and cancellation urgency.",
             },
             {
               icon: <BadgeDollarSign className="h-5 w-5" />,
-              title: "3. Manage",
-              text: "Users track what stays, what goes, and what needs a reminder before the next charge.",
+              title: "3. Request",
+              text: "Users can request cancellation guidance and keep each request attached to the subscription.",
             },
           ].map((step) => (
             <article key={step.title} className="rounded-xl bg-[#101010] p-6">
@@ -248,10 +246,10 @@ export default function Home() {
       <section id="features" className="relative z-10 mx-auto max-w-7xl px-4 py-20 sm:px-6">
         <div className="max-w-2xl">
           <p className="text-sm font-semibold text-red-300">Built for the web first</p>
-          <h2 className="mt-3 text-4xl font-black tracking-tight">A focused subscription command center.</h2>
+              <h2 className="mt-3 text-4xl font-black tracking-tight">A focused subscription command center.</h2>
           <p className="mt-4 text-pretty leading-7 text-white/54">
-            The first release should feel trustworthy on desktop and mobile web before we package the same product logic
-            into iOS and Android apps.
+            The web app handles the core product first: scanning, tier limits, cancellation requests, and the savings
+            assistant. The same backend can later power iOS and Android.
           </p>
         </div>
 
@@ -330,8 +328,8 @@ export default function Home() {
             </div>
             <h2 className="text-3xl font-black tracking-tight">Ready to scan the first account?</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/52">
-              Start with the web app. Once the core flow is stable, the same Supabase, Plaid, and Stripe foundation can
-              support iOS and Android.
+              Start with the web app, prove the savings workflow, then package the same Supabase, Plaid, and Stripe
+              foundation into iOS and Android.
             </p>
           </div>
           <Link href="/signup">

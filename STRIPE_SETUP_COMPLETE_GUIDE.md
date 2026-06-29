@@ -1,103 +1,112 @@
-# Complete Stripe Setup Guide for CancelIt
+# Stripe setup for CancelIt
 
-## Step 1: Get Your Stripe API Keys
+CancelIt has one free tier handled inside the app and three paid Stripe subscription tiers.
 
-1. Go to https://dashboard.stripe.com/test/apikeys
-2. Sign in to your Stripe account (or create one)
-3. You'll see two keys:
-   - **Publishable key** (starts with `pk_test_...`)
-   - **Secret key** (starts with `sk_test_...` - click "Reveal test key" to see it)
+## Paid tiers
 
-## Step 2: Create Your Three Products in Stripe
+| CancelIt tier | Stripe product name | Price | Billing |
+| --- | --- | ---: | --- |
+| Minimum | CancelIt Minimum | $4.99 | Monthly recurring |
+| Medium | CancelIt Medium | $9.99 | Monthly recurring |
+| Maximum | CancelIt Maximum | $19.99 | Monthly recurring |
 
-### Create Product 1: Minimum Plan ($7.99/month)
+## 1. Get API keys
 
-1. Go to https://dashboard.stripe.com/test/products
-2. Click **"Add product"**
-3. Fill in the details:
-   - **Name:** CancelIt Minimum
-   - **Description:** Great for individuals who want better control
-   - **Pricing model:** Standard pricing
-   - **Price:** 7.99
-   - **Currency:** USD
-   - **Billing period:** Monthly (Recurring)
-4. Click **"Save product"**
-5. On the product page, find the **Price** section
-6. Copy the **Price ID** (it starts with `price_...`)
-7. Save this for `NEXT_PUBLIC_STRIPE_PRICE_MINIMUM`
+In Stripe, open **Developers -> API keys**.
 
-### Create Product 2: Medium Plan ($9.99/month)
+Copy:
 
-1. Click **"Add product"** again
-2. Fill in:
-   - **Name:** CancelIt Medium
-   - **Description:** Perfect for power users and small families
-   - **Pricing model:** Standard pricing
-   - **Price:** 9.99
-   - **Currency:** USD
-   - **Billing period:** Monthly (Recurring)
-3. Click **"Save product"**
-4. Copy the **Price ID** (starts with `price_...`)
-5. Save this for `NEXT_PUBLIC_STRIPE_PRICE_MEDIUM`
+- Publishable key: starts with `pk_test_` or `pk_live_`
+- Secret key: starts with `sk_test_` or `sk_live_`
 
-### Create Product 3: Maximum Plan ($11.99/month)
+Use test keys while testing. Use live keys only when you are ready to charge real customers.
 
-1. Click **"Add product"** again
-2. Fill in:
-   - **Name:** CancelIt Maximum
-   - **Description:** For users who want all premium features
-   - **Pricing model:** Standard pricing
-   - **Price:** 11.99
-   - **Currency:** USD
-   - **Billing period:** Monthly (Recurring)
-3. Click **"Save product"**
-4. Copy the **Price ID** (starts with `price_...`)
-5. Save this for `NEXT_PUBLIC_STRIPE_PRICE_MAXIMUM`
+## 2. Create products and monthly prices
 
-## Step 3: Update Your .env.local File
+In Stripe, open **Product catalog -> Create product**.
 
-Open your `.env.local` file and replace these values:
+Create these three products:
 
-\`\`\`bash
-# Replace with your actual Stripe keys
-STRIPE_SECRET_KEY=sk_test_YOUR_ACTUAL_SECRET_KEY_HERE
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_YOUR_ACTUAL_PUBLISHABLE_KEY_HERE
+### CancelIt Minimum
 
-# Replace with your actual Price IDs
-NEXT_PUBLIC_STRIPE_PRICE_MINIMUM=price_YOUR_MINIMUM_PRICE_ID_HERE
-NEXT_PUBLIC_STRIPE_PRICE_MEDIUM=price_YOUR_MEDIUM_PRICE_ID_HERE
-NEXT_PUBLIC_STRIPE_PRICE_MAXIMUM=price_YOUR_MAXIMUM_PRICE_ID_HERE
-\`\`\`
+- Name: `CancelIt Minimum`
+- Description: `Track up to 10 subscriptions with Plaid scan up to 10 matches.`
+- Pricing model: `Standard pricing`
+- Price: `4.99`
+- Currency: `USD`
+- Billing period: `Monthly`
 
-## Step 4: Add Environment Variables to Vercel
+Copy the generated Price ID. It starts with `price_`.
 
-1. Go to https://vercel.com/dashboard
-2. Click on your **CancelIt** project
-3. Go to **Settings** → **Environment Variables**
-4. Add each variable one by one:
+### CancelIt Medium
 
-| Variable Name | Value | Environments |
-|--------------|-------|--------------|
-| `STRIPE_SECRET_KEY` | `sk_test_...` | Production, Preview, Development |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_test_...` | Production, Preview, Development |
-| `NEXT_PUBLIC_STRIPE_PRICE_MINIMUM` | `price_...` | Production, Preview, Development |
-| `NEXT_PUBLIC_STRIPE_PRICE_MEDIUM` | `price_...` | Production, Preview, Development |
-| `NEXT_PUBLIC_STRIPE_PRICE_MAXIMUM` | `price_...` | Production, Preview, Development |
+- Name: `CancelIt Medium`
+- Description: `Track up to 50 subscriptions with savings assistant and cancellation guidance.`
+- Pricing model: `Standard pricing`
+- Price: `9.99`
+- Currency: `USD`
+- Billing period: `Monthly`
 
-5. Click **"Save"** after each variable
+Copy the generated Price ID.
 
-## Step 5: Redeploy Your Application
+### CancelIt Maximum
 
-After adding the environment variables in Vercel:
+- Name: `CancelIt Maximum`
+- Description: `Unlimited subscription tracking with priority cancellation support.`
+- Pricing model: `Standard pricing`
+- Price: `19.99`
+- Currency: `USD`
+- Billing period: `Monthly`
 
-1. Go to **Deployments** tab
-2. Click the **three dots (...)** on the latest deployment
-3. Click **"Redeploy"**
-4. Wait for the deployment to complete
+Copy the generated Price ID.
 
-## Step 6: Test Your Integration
+## 3. Add environment variables
 
-### Test Locally:
-```powershell
-cd C:\Users\fabio\Documents\lustmia
-npm run dev
+Local `.env.local`:
+
+```bash
+STRIPE_SECRET_KEY=sk_test_YOUR_SECRET_KEY
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_YOUR_PUBLISHABLE_KEY
+
+NEXT_PUBLIC_STRIPE_PRICE_MINIMUM=price_YOUR_MINIMUM_PRICE_ID
+NEXT_PUBLIC_STRIPE_PRICE_MEDIUM=price_YOUR_MEDIUM_PRICE_ID
+NEXT_PUBLIC_STRIPE_PRICE_MAXIMUM=price_YOUR_MAXIMUM_PRICE_ID
+```
+
+For production, add the same keys in Vercel Project Settings -> Environment Variables.
+
+Use live Stripe keys and live Price IDs for production.
+
+## 4. Checkout flow
+
+The pricing page sends the selected `price_...` ID to:
+
+```text
+/api/create-checkout-session
+```
+
+The API only accepts the three configured CancelIt price IDs and stores this metadata in Stripe:
+
+```text
+plan_id=minimum | medium | maximum
+plan_name=Minimum | Medium | Maximum
+userId=<supabase user id>
+```
+
+After payment, Stripe redirects to:
+
+```text
+/payment/success?session_id={CHECKOUT_SESSION_ID}
+```
+
+That page calls:
+
+```text
+/api/verify-payment-session
+```
+
+and updates `customers.subscription_tier` in Supabase.
+
+## 5. Recommended next step
+
+Add a Stripe webhook later so renewals, failed payments, and cancellations update Supabase automatically. Checkout success verification is enough to start testing the first purchase flow.

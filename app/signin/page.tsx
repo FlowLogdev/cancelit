@@ -29,7 +29,9 @@ export default function SignInPage() {
 
     try {
       await signInWithEmail(email, password)
-      router.push("/pricing")
+      const searchParams = new URLSearchParams(window.location.search)
+      const redirectTo = searchParams.get("redirect")
+      router.push(redirectTo?.startsWith("/") ? redirectTo : "/dashboard")
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred during sign in"
 

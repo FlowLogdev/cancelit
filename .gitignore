@@ -16,9 +16,17 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 .next-dev*.log
+.next-build*.log
+.next-start*.log
 
 # env files
 .env*
+
+# local Supabase restore/credential artifacts
+cancelit_supabase_vercel.txt
+client_secret_*.json
+/restore/
+/supabase/
 !.env.example
 
 # vercel

@@ -24,7 +24,7 @@ export interface Subscription {
   amount: number
   billing_cycle: "monthly" | "yearly" | "weekly"
   next_billing_date: string
-  status: "active" | "cancelled" | "paused"
+  status: "active" | "cancelled" | "paused" | "pending_cancellation"
   category?: string
   description?: string
   created_at: string
@@ -89,7 +89,7 @@ export interface Database {
     }
     Enums: {
       billing_cycle: "monthly" | "yearly" | "weekly"
-      subscription_status: "active" | "cancelled" | "paused"
+      subscription_status: "active" | "cancelled" | "paused" | "pending_cancellation"
     }
   }
 }

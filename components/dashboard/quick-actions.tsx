@@ -26,7 +26,7 @@ export function QuickActions() {
       title: "Connect Bank",
       description: "Link your bank account via Plaid",
       icon: <CreditCard className="h-4 w-4" />,
-      action: () => router.push("/dashboard?tab=connect-bank"),
+      action: () => router.push("/dashboard/import"),
     },
     {
       title: "Analytics",
@@ -68,9 +68,9 @@ export function QuickActions() {
       badgeVariant: "default" as const,
     },
     {
-      title: "Enable Auto-Cancel",
-      description: "Automatically cancel subscriptions after free trials",
-      badge: "Pro Feature",
+      title: "Request Cancellation Help",
+      description: "Get a checklist and status trail for subscriptions you want to stop",
+      badge: "Guided",
       badgeVariant: "secondary" as const,
     },
   ]

@@ -26,7 +26,7 @@ create table if not exists public.subscriptions (
   cost numeric(10,2),
   billing_cycle text not null check (billing_cycle in ('weekly', 'monthly', 'yearly')),
   next_billing_date date not null,
-  status text not null default 'active' check (status in ('active', 'cancelled', 'paused', 'expired')),
+  status text not null default 'active' check (status in ('active', 'cancelled', 'paused', 'expired', 'pending_cancellation')),
   category text,
   description text,
   website_url text,
@@ -86,6 +86,21 @@ create table if not exists public.profiles (
   email text not null,
   full_name text,
   avatar_url text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.cancellation_requests (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  subscription_id uuid not null references public.subscriptions(id) on delete cascade,
+  subscription_name text not null,
+  status text not null default 'requested' check (status in ('requested', 'in_progress', 'completed', 'customer_action_needed', 'cancelled')),
+  cancellation_url text,
+  instructions text[] not null default '{}',
+  customer_notes text,
+  support_notes text,
+  completed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -192,12 +207,18 @@ create trigger plaid_transactions_updated_at
   before update on public.plaid_transactions
   for each row execute function public.handle_updated_at();
 
+drop trigger if exists cancellation_requests_updated_at on public.cancellation_requests;
+create trigger cancellation_requests_updated_at
+  before update on public.cancellation_requests
+  for each row execute function public.handle_updated_at();
+
 alter table public.customers enable row level security;
 alter table public.subscriptions enable row level security;
 alter table public.profiles enable row level security;
 alter table public.plaid_items enable row level security;
 alter table public.plaid_accounts enable row level security;
 alter table public.plaid_transactions enable row level security;
+alter table public.cancellation_requests enable row level security;
 
 drop policy if exists "Customers can read own record" on public.customers;
 drop policy if exists "Customers can update own record" on public.customers;
@@ -207,6 +228,7 @@ drop policy if exists "Profiles belong to user" on public.profiles;
 drop policy if exists "Plaid items belong to user" on public.plaid_items;
 drop policy if exists "Plaid accounts belong to user" on public.plaid_accounts;
 drop policy if exists "Plaid transactions belong to user" on public.plaid_transactions;
+drop policy if exists "Cancellation requests belong to user" on public.cancellation_requests;
 
 create policy "Customers can read own record"
   on public.customers for select
@@ -254,6 +276,12 @@ create policy "Plaid transactions belong to user"
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 
+create policy "Cancellation requests belong to user"
+  on public.cancellation_requests for all
+  to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
 create index if not exists customers_user_id_idx on public.customers(user_id);
 create index if not exists customers_email_idx on public.customers(email);
 create index if not exists customers_stripe_customer_id_idx on public.customers(stripe_customer_id);
@@ -265,6 +293,9 @@ create index if not exists plaid_items_user_id_idx on public.plaid_items(user_id
 create index if not exists plaid_items_item_id_idx on public.plaid_items(item_id);
 create index if not exists plaid_accounts_user_id_idx on public.plaid_accounts(user_id);
 create index if not exists plaid_transactions_user_id_idx on public.plaid_transactions(user_id);
+create index if not exists cancellation_requests_user_id_idx on public.cancellation_requests(user_id);
+create index if not exists cancellation_requests_subscription_id_idx on public.cancellation_requests(subscription_id);
+create index if not exists cancellation_requests_status_idx on public.cancellation_requests(status);
 
 grant select, insert, update on public.customers to authenticated;
 grant select, insert, update, delete on public.subscriptions to authenticated;
@@ -272,6 +303,7 @@ grant select, insert, update on public.profiles to authenticated;
 grant select, insert, update, delete on public.plaid_items to authenticated;
 grant select, insert, update, delete on public.plaid_accounts to authenticated;
 grant select, insert, update, delete on public.plaid_transactions to authenticated;
+grant select, insert, update on public.cancellation_requests to authenticated;
 
 grant all on public.customers to service_role;
 grant all on public.subscriptions to service_role;
@@ -279,6 +311,7 @@ grant all on public.profiles to service_role;
 grant all on public.plaid_items to service_role;
 grant all on public.plaid_accounts to service_role;
 grant all on public.plaid_transactions to service_role;
+grant all on public.cancellation_requests to service_role;
 
 grant usage on all sequences in schema public to authenticated;
 grant usage on all sequences in schema public to service_role;

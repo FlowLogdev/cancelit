@@ -8,17 +8,25 @@ import { SmartNotifications } from "@/components/dashboard/smart-notifications"
 import { SpendingAnalytics } from "@/components/dashboard/spending-analytics"
 import { SecurityPrivacy } from "@/components/dashboard/security-privacy"
 import { QuickActions } from "@/components/dashboard/quick-actions"
+import { AIChatAssistant } from "@/components/ai/ai-chat-assistant"
 import { createClient } from "@/lib/supabase/client"
+import { getPlanLimits, isAdminEmail, normalizeTier } from "@/lib/plan-limits"
 import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
+  const [tier, setTier] = useState("free")
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "connect-bank") {
+      router.replace("/dashboard/import")
+      return
+    }
+
     const getUser = async () => {
       try {
         const {
@@ -31,6 +39,14 @@ export default function DashboardPage() {
         }
 
         setUser(user)
+
+        const { data: customer } = await supabase
+          .from("customers")
+          .select("subscription_tier")
+          .eq("user_id", user.id)
+          .maybeSingle()
+
+        setTier(isAdminEmail(user.email) ? "maximum" : normalizeTier(customer?.subscription_tier))
       } catch {
         router.push("/signin")
       } finally {
@@ -55,6 +71,7 @@ export default function DashboardPage() {
   if (!user) return null
 
   const firstName = user.user_metadata?.full_name?.split(" ")[0] ?? user.email?.split("@")[0] ?? "there"
+  const planLimits = getPlanLimits(tier, user.email)
 
   return (
     <div className="min-h-screen bg-black">
@@ -107,6 +124,8 @@ export default function DashboardPage() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <AIChatAssistant isPaidUser={planLimits.aiAssistant} tier={tier} />
     </div>
   )
 }

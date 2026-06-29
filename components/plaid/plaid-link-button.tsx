@@ -9,36 +9,66 @@ import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
 
 interface PlaidLinkButtonProps {
-  onSuccess?: () => void
+  onSuccess?: (result?: { itemId?: string; institution?: string }) => void
   onExit?: () => void
   className?: string
   children?: React.ReactNode
 }
 
+const LINK_TOKEN_STORAGE_KEY = "cancelit_plaid_link_token"
+
+function logPlaidEvent(eventName: string, metadata?: any, error?: any) {
+  fetch("/api/plaid/link-event", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ eventName, metadata, error }),
+  }).catch((logError) => {
+    console.warn("Failed to log Plaid Link event:", logError)
+  })
+}
+
 export function PlaidLinkButton({ onSuccess, onExit, className, children }: PlaidLinkButtonProps) {
   const [linkToken, setLinkToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [setupError, setSetupError] = useState<string | null>(null)
+  const [receivedRedirectUri, setReceivedRedirectUri] = useState<string | undefined>()
   const { toast } = useToast()
 
-  // Fetch link token on mount
   useEffect(() => {
     async function createLinkToken() {
       try {
+        const isOAuthRedirect =
+          typeof window !== "undefined" && new URLSearchParams(window.location.search).has("oauth_state_id")
+        const storedToken = typeof window !== "undefined" ? window.localStorage.getItem(LINK_TOKEN_STORAGE_KEY) : null
+
+        if (isOAuthRedirect && storedToken) {
+          setReceivedRedirectUri(window.location.href)
+          setLinkToken(storedToken)
+          return
+        }
+
         const response = await fetch("/api/plaid/create-link-token", {
           method: "POST",
         })
 
         if (!response.ok) {
-          throw new Error("Failed to create link token")
+          const data = await response.json().catch(() => null)
+          throw new Error(data?.error || "Failed to create link token")
         }
 
         const data = await response.json()
         setLinkToken(data.link_token)
+        setSetupError(null)
+        window.localStorage.setItem(LINK_TOKEN_STORAGE_KEY, data.link_token)
       } catch (error) {
         console.error("Error creating link token:", error)
+        const message = error instanceof Error ? error.message : "Failed to initialize Plaid. Please try again."
+        setSetupError(message)
         toast({
-          title: "Error",
-          description: "Failed to initialize Plaid. Please try again.",
+          title: "Plaid is not ready",
+          description: message,
           variant: "destructive",
         })
       }
@@ -67,25 +97,26 @@ export function PlaidLinkButton({ onSuccess, onExit, className, children }: Plai
         })
 
         if (!response.ok) {
-          throw new Error("Failed to exchange token")
+          const data = await response.json().catch(() => null)
+          throw new Error(data?.error || "Failed to exchange token")
         }
 
         const data = await response.json()
-        console.log("Token exchange successful:", data)
+        window.localStorage.removeItem(LINK_TOKEN_STORAGE_KEY)
 
         toast({
           title: "Bank Connected Successfully!",
-          description: `Connected to ${metadata.institution.name}`,
+          description: metadata.institution?.name ? `Connected to ${metadata.institution.name}` : "Your account is connected.",
         })
 
         if (onSuccess) {
-          onSuccess()
+          onSuccess({ itemId: data.item_id, institution: data.institution })
         }
       } catch (error) {
         console.error("Error exchanging token:", error)
         toast({
           title: "Error",
-          description: "Failed to connect bank account. Please try again.",
+          description: error instanceof Error ? error.message : "Failed to connect bank account. Please try again.",
           variant: "destructive",
         })
       } finally {
@@ -98,6 +129,7 @@ export function PlaidLinkButton({ onSuccess, onExit, className, children }: Plai
   const handleOnExit = useCallback(
     (error: any, metadata: any) => {
       console.log("Plaid Link Exit:", { error, metadata })
+      logPlaidEvent("EXIT", metadata, error)
 
       if (error) {
         toast({
@@ -114,10 +146,16 @@ export function PlaidLinkButton({ onSuccess, onExit, className, children }: Plai
     [toast, onExit],
   )
 
+  const handleOnEvent = useCallback((eventName: string, metadata: any) => {
+    logPlaidEvent(eventName, metadata)
+  }, [])
+
   const config = {
     token: linkToken,
     onSuccess: handleOnSuccess,
     onExit: handleOnExit,
+    onEvent: handleOnEvent,
+    receivedRedirectUri,
   }
 
   const { open, ready } = usePlaidLink(config)
@@ -129,12 +167,14 @@ export function PlaidLinkButton({ onSuccess, onExit, className, children }: Plai
   }
 
   return (
-    <Button onClick={handleClick} disabled={!ready || loading} className={className}>
+    <Button onClick={handleClick} disabled={!ready || loading || Boolean(setupError)} className={className}>
       {loading ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Connecting...
         </>
+      ) : setupError ? (
+        "Plaid setup issue"
       ) : (
         children || "Connect Bank Account"
       )}

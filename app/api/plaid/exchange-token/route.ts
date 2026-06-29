@@ -1,9 +1,11 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@/lib/supabase/route-client"
 import { NextResponse } from "next/server"
 import { Configuration, PlaidApi, PlaidEnvironments } from "plaid"
 
+const plaidEnv = process.env.PLAID_ENV || "sandbox"
+
 const configuration = new Configuration({
-  basePath: PlaidEnvironments[process.env.PLAID_ENV as keyof typeof PlaidEnvironments] || PlaidEnvironments.sandbox,
+  basePath: PlaidEnvironments[plaidEnv as keyof typeof PlaidEnvironments] || PlaidEnvironments.sandbox,
   baseOptions: {
     headers: {
       "PLAID-CLIENT-ID": process.env.PLAID_CLIENT_ID,
@@ -16,6 +18,10 @@ const plaidClient = new PlaidApi(configuration)
 
 export async function POST(request: Request) {
   try {
+    if (!process.env.PLAID_CLIENT_ID || !process.env.PLAID_SECRET) {
+      return NextResponse.json({ error: "Plaid is not configured yet." }, { status: 503 })
+    }
+
     const supabase = await createClient()
 
     const {
@@ -30,9 +36,10 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { public_token, institution, accounts } = body
 
-    console.log("Exchanging public token for user:", user.id)
+    if (!public_token) {
+      return NextResponse.json({ error: "Public token is required" }, { status: 400 })
+    }
 
-    // Exchange public token for access token
     const exchangeResponse = await plaidClient.itemPublicTokenExchange({
       public_token,
     })
@@ -40,26 +47,27 @@ export async function POST(request: Request) {
     const accessToken = exchangeResponse.data.access_token
     const itemId = exchangeResponse.data.item_id
 
-    console.log("Token exchanged successfully, storing in database...")
-
-    // Store the access token and item ID in the database
-    const { error: dbError } = await supabase.from("plaid_items").insert({
-      user_id: user.id,
-      item_id: itemId,
-      access_token: accessToken,
-      institution_id: institution?.institution_id,
-      institution_name: institution?.name,
-      status: "active",
-    })
+    const { error: dbError } = await supabase
+      .from("plaid_items")
+      .upsert(
+        {
+          user_id: user.id,
+          item_id: itemId,
+          access_token: accessToken,
+          institution_id: institution?.institution_id,
+          institution_name: institution?.name,
+          status: "active",
+          error_message: null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "item_id" },
+      )
 
     if (dbError) {
       console.error("Error storing Plaid connection:", dbError)
       throw new Error("Failed to store bank connection")
     }
 
-    console.log("Plaid connection stored successfully")
-
-    // Store account information
     if (accounts && accounts.length > 0) {
       const accountData = accounts.map((account: any) => ({
         user_id: user.id,
@@ -69,9 +77,17 @@ export async function POST(request: Request) {
         account_mask: account.mask,
         account_type: account.type,
         account_subtype: account.subtype,
+        updated_at: new Date().toISOString(),
       }))
 
-      await supabase.from("plaid_accounts").insert(accountData)
+      const { error: accountsError } = await supabase
+        .from("plaid_accounts")
+        .upsert(accountData, { onConflict: "user_id,account_id" })
+
+      if (accountsError) {
+        console.error("Error storing Plaid accounts:", accountsError)
+        throw new Error("Failed to store connected accounts")
+      }
     }
 
     return NextResponse.json({

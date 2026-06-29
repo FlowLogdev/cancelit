@@ -77,9 +77,11 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  // Redirect to pricing if already authenticated and trying to access auth pages
+  // Redirect to the app if already authenticated and trying to access auth pages
   if (isAuthRoute && user) {
-    return NextResponse.redirect(new URL("/pricing", req.url))
+    const redirectParam = req.nextUrl.searchParams.get("redirect")
+    const destination = redirectParam?.startsWith("/") ? redirectParam : "/dashboard"
+    return NextResponse.redirect(new URL(destination, req.url))
   }
 
   return response

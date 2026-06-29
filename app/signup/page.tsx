@@ -109,9 +109,9 @@ export default function SignUpPage() {
         description: "Please check your email to confirm your account.",
       })
 
-      // Redirect to pricing page after 3 seconds
+      // Redirect to the free dashboard after account creation.
       setTimeout(() => {
-        router.push("/pricing")
+        router.push("/dashboard")
       }, 3000)
     } catch (err: any) {
       console.error("Sign up error:", err)
@@ -158,7 +158,7 @@ export default function SignUpPage() {
 
     try {
       await signInWithGoogle()
-      // OAuth will redirect through callback, which will then redirect to pricing
+      // OAuth will redirect through callback, which then opens the dashboard.
     } catch (err: any) {
       console.error("Google sign up error:", err)
       setError(err?.message || "Failed to sign up with Google")
@@ -189,10 +189,13 @@ export default function SignUpPage() {
               <p className="text-sm text-blue-800 mb-2">
                 <strong>Important:</strong> Check your email to confirm your account.
               </p>
-              <p className="text-sm text-blue-800">You'll be redirected to choose your plan in a moment...</p>
+              <p className="text-sm text-blue-800">
+                You'll be redirected to your free dashboard in a moment. Free accounts can scan up to 5 subscriptions
+                with Plaid.
+              </p>
             </div>
-            <Button onClick={() => router.push("/pricing")} className="w-full">
-              Choose Your Plan
+            <Button onClick={() => router.push("/dashboard")} className="w-full">
+              Open Dashboard
             </Button>
           </CardContent>
         </Card>

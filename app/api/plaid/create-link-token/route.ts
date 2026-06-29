@@ -1,9 +1,11 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@/lib/supabase/route-client"
 import { NextResponse } from "next/server"
 import { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } from "plaid"
 
+const plaidEnv = process.env.PLAID_ENV || "sandbox"
+
 const configuration = new Configuration({
-  basePath: PlaidEnvironments[process.env.PLAID_ENV as keyof typeof PlaidEnvironments] || PlaidEnvironments.sandbox,
+  basePath: PlaidEnvironments[plaidEnv as keyof typeof PlaidEnvironments] || PlaidEnvironments.sandbox,
   baseOptions: {
     headers: {
       "PLAID-CLIENT-ID": process.env.PLAID_CLIENT_ID,
@@ -14,8 +16,29 @@ const configuration = new Configuration({
 
 const plaidClient = new PlaidApi(configuration)
 
-export async function POST() {
+function getRedirectUri(request: Request) {
+  const origin = request.headers.get("origin")
+  const fallback = process.env.PLAID_REDIRECT_URI
+  const allowedOrigins = new Set([
+    "https://cancelit.app",
+    "https://www.cancelit.app",
+    "http://localhost:3000",
+    "http://localhost:3005",
+  ])
+
+  if (origin && allowedOrigins.has(origin)) {
+    return `${origin}/plaid/oauth`
+  }
+
+  return fallback
+}
+
+export async function POST(request: Request) {
   try {
+    if (!process.env.PLAID_CLIENT_ID || !process.env.PLAID_SECRET) {
+      return NextResponse.json({ error: "Plaid is not configured yet." }, { status: 503 })
+    }
+
     const supabase = await createClient()
 
     const {
@@ -27,9 +50,8 @@ export async function POST() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    console.log("Creating Plaid link token for user:", user.id)
+    const redirectUri = getRedirectUri(request)
 
-    // Create a link token
     const response = await plaidClient.linkTokenCreate({
       user: {
         client_user_id: user.id,
@@ -38,21 +60,28 @@ export async function POST() {
       products: [Products.Transactions],
       country_codes: [CountryCode.Us],
       language: "en",
+      transactions: {
+        days_requested: 180,
+      },
       webhook: process.env.PLAID_WEBHOOK_URL,
-      redirect_uri: process.env.PLAID_REDIRECT_URI,
+      ...(redirectUri ? { redirect_uri: redirectUri } : {}),
     })
-
-    console.log("Link token created successfully")
 
     return NextResponse.json({
       link_token: response.data.link_token,
       expiration: response.data.expiration,
     })
   } catch (error: any) {
-    console.error("Error creating link token:", error)
+    const plaidError = error?.response?.data
+    console.error("Error creating link token:", plaidError || error)
+
+    const errorCode = plaidError?.error_code
+    const errorMessage = plaidError?.display_message || plaidError?.error_message || error.message
+
     return NextResponse.json(
       {
-        error: error.message || "Failed to create link token",
+        error: errorMessage || "Failed to create link token",
+        code: errorCode,
       },
       { status: 500 },
     )

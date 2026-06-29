@@ -10,11 +10,21 @@ import { createClient } from "@/lib/supabase/client"
 
 const plans = [
   {
+    name: "Free",
+    price: "$0",
+    period: "/month",
+    description: "For trying CancelIt before paying",
+    features: ["Track up to 5 subscriptions", "Plaid scan returns up to 5 matches", "Basic dashboard access"],
+    priceId: undefined,
+    popular: false,
+    free: true,
+  },
+  {
     name: "Minimum",
     price: "$4.99",
     period: "/month",
-    description: "Perfect for individuals starting to manage subscriptions",
-    features: ["Track up to 10 subscriptions", "Basic spending analytics", "Email reminders", "Mobile app access"],
+    description: "For people who want a short, clean list",
+    features: ["Track up to 10 subscriptions", "Plaid scan returns up to 10 matches", "Basic spending analytics", "Email reminders"],
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_MINIMUM,
     popular: false,
   },
@@ -22,9 +32,11 @@ const plans = [
     name: "Medium",
     price: "$9.99",
     period: "/month",
-    description: "Ideal for households managing multiple subscriptions",
+    description: "For households and heavy app users",
     features: [
       "Track up to 50 subscriptions",
+      "Plaid scan returns up to 50 matches",
+      "Savings assistant",
       "Advanced analytics & insights",
       "Priority email reminders",
       "Budget tracking",
@@ -41,6 +53,7 @@ const plans = [
     description: "For power users and small businesses",
     features: [
       "Unlimited subscriptions",
+      "Unlimited Plaid-detected matches",
       "AI-powered insights",
       "Team collaboration (up to 5 users)",
       "Custom categories",
@@ -118,11 +131,11 @@ export default function PricingPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Choose Your Plan</h1>
-          <p className="text-xl text-gray-600">Select the perfect plan for your subscription management needs</p>
+          <p className="text-xl text-gray-600">Plaid can detect recurring charges, but each plan controls how many matches you can manage.</p>
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
+        <div className="grid md:grid-cols-4 gap-6 mb-12">
           {plans.map((plan) => (
             <Card
               key={plan.name}
@@ -154,10 +167,10 @@ export default function PricingPage() {
               <CardFooter>
                 <Button
                   className={`w-full ${plan.popular ? "bg-blue-600 hover:bg-blue-700" : ""}`}
-                  onClick={() => handleSubscribe(plan.priceId, plan.name)}
+                  onClick={() => (plan.free ? router.push("/signup") : handleSubscribe(plan.priceId, plan.name))}
                   disabled={loadingPlan !== null}
                 >
-                  {loadingPlan === plan.name ? "Loading..." : "Get Started"}
+                  {loadingPlan === plan.name ? "Loading..." : plan.free ? "Start Free" : "Get Started"}
                 </Button>
               </CardFooter>
             </Card>

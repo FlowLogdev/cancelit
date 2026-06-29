@@ -26,11 +26,11 @@ Add these to your `.env.local` file:
 # Plaid Configuration
 PLAID_CLIENT_ID=your_client_id_here
 PLAID_SECRET=your_sandbox_secret_here
-PLAID_ENV=sandbox
+PLAID_ENV=production
 
 # Optional: For webhooks and OAuth
-PLAID_WEBHOOK_URL=https://your-domain.com/api/plaid/webhook
-PLAID_REDIRECT_URI=https://your-domain.com/dashboard
+PLAID_WEBHOOK_URL=https://www.cancelit.app/api/plaid/webhook
+PLAID_REDIRECT_URI=https://www.cancelit.app/plaid/oauth
 \`\`\`
 
 ### Environment Options:
@@ -148,6 +148,8 @@ Before going to production:
 - [ ] Request production access from Plaid
 - [ ] Switch to production credentials
 - [ ] Update `PLAID_ENV=production`
+- [ ] Add `https://www.cancelit.app/plaid/oauth` in Plaid Dashboard under Link redirect URIs
+- [ ] Add `https://www.cancelit.app/api/plaid/webhook` as the Plaid webhook URL
 - [ ] Set up proper webhook handling
 - [ ] Implement transaction syncing
 - [ ] Add error monitoring
