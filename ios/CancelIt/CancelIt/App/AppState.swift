@@ -24,30 +24,32 @@ final class AppState {
 
   let api = APIClient(baseURL: AppConfig.apiBaseURL)
   let auth: AuthService
+  let billing = BillingService()
 
   init() {
     auth = AuthService()
   }
 
   func bootstrap() async {
-    do {
-      if let userEmail = try await auth.currentUserEmail() {
-        email = userEmail
-        authPhase = .signedIn
-        await refresh()
-      } else {
-        authPhase = .signedOut
-      }
-    } catch {
+    if let user = await auth.currentUser() {
+      email = user.email ?? ""
+      authPhase = .signedIn
+      await billing.identify(userId: user.id)
+      await refresh()
+    } else {
       authPhase = .signedOut
-      toast = .error(error.localizedDescription)
     }
   }
 
   func signIn(email: String, password: String) async {
     do {
       try await auth.signIn(email: email, password: password)
-      self.email = email
+      if let user = await auth.currentUser() {
+        self.email = user.email ?? email
+        await billing.identify(userId: user.id)
+      } else {
+        self.email = email
+      }
       authPhase = .signedIn
       await refresh()
     } catch {
@@ -58,7 +60,12 @@ final class AppState {
   func signUp(email: String, password: String) async {
     do {
       try await auth.signUp(email: email, password: password)
-      self.email = email
+      if let user = await auth.currentUser() {
+        self.email = user.email ?? email
+        await billing.identify(userId: user.id)
+      } else {
+        self.email = email
+      }
       authPhase = .signedIn
       await refresh()
     } catch {
@@ -79,7 +86,11 @@ final class AppState {
   func refresh() async {
     let token = await auth.accessToken
     let customerResult: CustomerEnvelope? = try? await api.get("/api/customers", token: token)
+    let subscriptionResult: SubscriptionsEnvelope? = try? await api.get("/api/subscriptions", token: token)
     let plaid: PlaidAccountsEnvelope? = try? await api.get("/api/plaid/accounts", token: token)
+    if let fetchedSubscriptions = subscriptionResult?.subscriptions {
+      subscriptions = fetchedSubscriptions
+    }
     connectedItems = plaid?.items ?? []
     dashboard = DashboardSnapshot.from(subscriptions: subscriptions, customer: customerResult?.customer)
   }

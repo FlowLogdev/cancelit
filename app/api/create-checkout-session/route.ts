@@ -5,17 +5,17 @@ import { createClient } from "@/lib/supabase/route-client"
 const configuredPlans = [
   {
     tier: "minimum",
-    name: "Minimum",
+    name: "Starter",
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_MINIMUM,
   },
   {
     tier: "medium",
-    name: "Medium",
+    name: "Plus",
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_MEDIUM,
   },
   {
     tier: "maximum",
-    name: "Maximum",
+    name: "Unlimited",
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_MAXIMUM,
   },
 ]

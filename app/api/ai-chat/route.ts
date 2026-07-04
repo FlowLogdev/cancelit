@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     const limits = getPlanLimits(tier, user.email)
 
     if (!limits.aiAssistant) {
-      return NextResponse.json({ error: "The savings assistant is available on Medium and Maximum plans." }, { status: 402 })
+      return NextResponse.json({ error: "The savings assistant is available on Plus and Unlimited plans." }, { status: 402 })
     }
 
     const { data: subscriptionData, error: subscriptionError } = await supabase

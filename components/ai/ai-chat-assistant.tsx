@@ -110,9 +110,9 @@ export function AIChatAssistant({ isPaidUser, tier = "free" }: AIChatAssistantPr
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/10 text-red-200">
                 <Sparkles className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-semibold">AI guidance starts on Medium.</h3>
+              <h3 className="text-lg font-semibold">AI guidance starts on Plus.</h3>
               <p className="mt-2 text-sm leading-6 text-white/48">
-                Minimum keeps tracking simple. Medium adds savings recommendations, renewal review, and cancellation guidance.
+                Starter keeps tracking simple. Plus adds savings recommendations, renewal review, and cancellation guidance.
               </p>
               <Button className="mt-5 bg-red-500 text-white hover:bg-red-600" onClick={() => (window.location.href = "/pricing")}>
                 View plans

@@ -1,10 +1,13 @@
+import LinkKit
 import SwiftUI
 
 struct PlaidConnectView: View {
-  @Environment(AppState.self) private var appState
-  @Environment(\.dismiss) private var dismiss
+  @SwiftUI.Environment(AppState.self) private var appState
+  @SwiftUI.Environment(\.dismiss) private var dismiss
   @State private var isConnecting = false
   @State private var isScanning = false
+  @State private var linkSession: PlaidLinkSession?
+  @State private var isPresentingLink = false
   @State private var selected: Set<String> = []
   @State private var notice: String?
 
@@ -74,25 +77,84 @@ struct PlaidConnectView: View {
         }
       }
     }
+    .sheet(isPresented: $isPresentingLink) {
+      if let linkSession {
+        linkSession.sheet()
+      }
+    }
   }
 
+  @MainActor
   private func connectBank() async {
     isConnecting = true
     defer { isConnecting = false }
 
     do {
-      let _: PlaidLinkTokenEnvelope = try await appState.api.post(
+      let response: PlaidLinkTokenEnvelope = try await appState.api.post(
         "/api/plaid/create-link-token",
         body: EmptyBody(),
         token: await appState.auth.accessToken
       )
-      notice = "Secure bank connection prepared. If the Plaid sheet does not appear, check the iOS redirect settings and try again."
+      openPlaidLink(with: response.linkToken)
     } catch {
       let message = error.localizedDescription
       notice = message.contains("500") ? "The bank returned an internal error. Try again later or choose another institution." : message
     }
   }
 
+  @MainActor
+  private func openPlaidLink(with linkToken: String) {
+    let configuration = LinkTokenConfiguration(
+      token: linkToken,
+      onSuccess: { success in
+        Task { @MainActor in
+          isPresentingLink = false
+          await exchange(publicToken: success.publicToken, metadata: success.metadata)
+        }
+      },
+      onExit: { exit in
+        Task { @MainActor in
+          isPresentingLink = false
+          if let error = exit.error {
+            notice = error.displayMessage ?? error.errorMessage
+          }
+        }
+      },
+      onEvent: nil,
+      onLoad: nil
+    )
+
+    do {
+      linkSession = try Plaid.createPlaidLinkSession(configuration: configuration)
+      isPresentingLink = true
+      notice = nil
+    } catch {
+      notice = error.localizedDescription
+    }
+  }
+
+  @MainActor
+  private func exchange(publicToken: String, metadata: SuccessMetadata) async {
+    do {
+      let response: PlaidExchangeEnvelope = try await appState.api.post(
+        "/api/plaid/exchange-token",
+        body: PlaidExchangeRequest(
+          publicToken: publicToken,
+          institution: PlaidInstitutionPayload(
+            institutionId: metadata.institution.id,
+            name: metadata.institution.name
+          )
+        ),
+        token: await appState.auth.accessToken
+      )
+      notice = response.institution.map { "Connected to \($0)." } ?? "Bank connected successfully."
+      await appState.refresh()
+    } catch {
+      notice = error.localizedDescription
+    }
+  }
+
+  @MainActor
   private func scan(item: PlaidItem) async {
     isScanning = true
     defer { isScanning = false }
@@ -113,7 +175,7 @@ struct PlaidConnectView: View {
 }
 
 struct ImportReviewView: View {
-  @Environment(AppState.self) private var appState
+  @SwiftUI.Environment(AppState.self) private var appState
   @Binding var selected: Set<String>
   @State private var isImporting = false
 
@@ -159,6 +221,7 @@ struct ImportReviewView: View {
     }
   }
 
+  @MainActor
   private func importSelected() async {
     isImporting = true
     defer { isImporting = false }
@@ -185,6 +248,32 @@ struct PlaidLinkTokenEnvelope: Decodable {
   let expiration: String
 }
 
+struct PlaidExchangeRequest: Encodable {
+  let publicToken: String
+  let institution: PlaidInstitutionPayload?
+
+  enum CodingKeys: String, CodingKey {
+    case publicToken = "public_token"
+    case institution
+  }
+}
+
+struct PlaidInstitutionPayload: Encodable {
+  let institutionId: String?
+  let name: String?
+
+  enum CodingKeys: String, CodingKey {
+    case institutionId = "institution_id"
+    case name
+  }
+}
+
+struct PlaidExchangeEnvelope: Decodable {
+  let success: Bool
+  let itemId: String
+  let institution: String?
+}
+
 struct DetectedSubscriptionsEnvelope: Decodable {
   let subscriptions: [DetectedSubscription]
   let addOnNotice: String?
@@ -201,6 +290,15 @@ struct ImportSubscriptionPayload: Encodable {
   let lastCharge: String?
   let nextBillingDate: String?
   let category: String?
+
+  enum CodingKeys: String, CodingKey {
+    case merchantName = "merchant_name"
+    case amount
+    case frequency
+    case lastCharge = "last_payment_date"
+    case nextBillingDate = "next_billing_date"
+    case category
+  }
 
   init(_ subscription: DetectedSubscription) {
     merchantName = subscription.merchantName

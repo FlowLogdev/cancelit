@@ -53,22 +53,22 @@ const features = [
 
 const plans = [
   {
-    name: "Minimum",
+    name: "Starter",
     price: "$4.99",
     description: "For a short personal list.",
-    features: ["10 tracked subscriptions", "Plaid scan up to 10", "Basic reminders"],
+    features: ["10 tracked subscriptions", "Plaid scan up to 10", "Renewal reminders"],
   },
   {
-    name: "Medium",
-    price: "$9.99",
-    description: "For households and heavy app users.",
+    name: "Plus",
+    price: "$12.99",
+    description: "Best for a full scan and savings help.",
     features: ["50 Plaid-detected subscriptions", "Savings assistant", "Cancellation guidance"],
     highlighted: true,
   },
   {
-    name: "Maximum",
+    name: "Unlimited",
     price: "$19.99",
-    description: "For power users and small teams.",
+    description: "For heavy cleanup and ongoing control.",
     features: ["Unlimited tracking", "Priority cancellation support", "Advanced reporting"],
   },
 ]

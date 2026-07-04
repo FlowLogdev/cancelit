@@ -59,6 +59,10 @@ struct CustomerEnvelope: Codable {
   let customer: Customer?
 }
 
+struct SubscriptionsEnvelope: Codable {
+  let subscriptions: [Subscription]
+}
+
 struct PlaidAccountsEnvelope: Codable {
   let items: [PlaidItem]
 }
@@ -108,8 +112,4 @@ struct CancellationRequest: Encodable {
 struct GetSubscriptionsRequest: Encodable {
   let itemId: String
   let refresh: Bool
-}
-
-struct CheckoutRequest: Encodable {
-  let priceId: String
 }

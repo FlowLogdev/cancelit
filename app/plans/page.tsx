@@ -569,9 +569,9 @@ const featureCategories = [
 
 const pricingTiers = [
   { id: "free", name: "Free", price: "$0", period: "forever", popular: false },
-  { id: "minimum", name: "Minimum", price: "$7.99", period: "month", popular: false },
-  { id: "medium", name: "Medium", price: "$9.99", period: "month", popular: true },
-  { id: "maximum", name: "Maximum", price: "$11.99", period: "month", popular: false },
+  { id: "minimum", name: "Starter", price: "$4.99", period: "month", popular: false },
+  { id: "medium", name: "Plus", price: "$12.99", period: "month", popular: true },
+  { id: "maximum", name: "Unlimited", price: "$19.99", period: "month", popular: false },
   { id: "enterprise", name: "Enterprise", price: "Custom", period: "pricing", popular: false },
 ]
 

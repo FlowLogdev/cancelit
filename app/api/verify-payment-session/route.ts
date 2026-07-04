@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 
     const subscription = session.subscription as Stripe.Subscription
     const planId = session.metadata?.plan_id || subscription.metadata?.plan_id || "minimum"
-    const planName = session.metadata?.plan_name || subscription.metadata?.plan_name || "Minimum"
+    const planName = session.metadata?.plan_name || subscription.metadata?.plan_name || "Starter"
 
     // Update customer record with subscription info
     const { error: updateError } = await supabase

@@ -3,6 +3,11 @@ import Supabase
 
 @MainActor
 final class AuthService {
+  struct UserIdentity {
+    let id: String
+    let email: String?
+  }
+
   private let client: SupabaseClient?
 
   var accessToken: String? {
@@ -19,9 +24,14 @@ final class AuthService {
     }
   }
 
-  func currentUserEmail() async throws -> String? {
+  func currentUserEmail() async -> String? {
+    await currentUser()?.email
+  }
+
+  func currentUser() async -> UserIdentity? {
     guard let client else { return nil }
-    return try await client.auth.user().email
+    guard let user = try? await client.auth.user() else { return nil }
+    return UserIdentity(id: user.id.uuidString, email: user.email)
   }
 
   func signIn(email: String, password: String) async throws {

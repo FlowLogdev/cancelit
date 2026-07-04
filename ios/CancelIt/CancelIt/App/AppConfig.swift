@@ -4,9 +4,14 @@ enum AppConfig {
   static let apiBaseURL = configuredURL("API_BASE_URL") ?? URL(string: "https://cancelit.app")!
   static let supabaseURL = configuredURL("SUPABASE_URL")
   static let supabaseKey = configuredString("SUPABASE_PUBLISHABLE_KEY")
+  static let revenueCatAPIKey = configuredString("REVENUECAT_API_KEY")
 
   static var isSupabaseConfigured: Bool {
     supabaseURL != nil && supabaseKey?.isEmpty == false && supabaseKey != "YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY"
+  }
+
+  static var isRevenueCatConfigured: Bool {
+    revenueCatAPIKey?.isEmpty == false && revenueCatAPIKey != "YOUR_REVENUECAT_PUBLIC_IOS_SDK_KEY"
   }
 
   private static func configuredString(_ key: String) -> String? {
@@ -20,4 +25,3 @@ enum AppConfig {
     return URL(string: value)
   }
 }
-
