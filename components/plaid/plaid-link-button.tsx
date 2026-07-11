@@ -38,6 +38,8 @@ export function PlaidLinkButton({ onSuccess, onExit, className, children }: Plai
           return
         }
 
+        window.localStorage.removeItem(LINK_TOKEN_STORAGE_KEY)
+
         const response = await fetch("/api/plaid/create-link-token", {
           method: "POST",
         })
@@ -119,9 +121,9 @@ export function PlaidLinkButton({ onSuccess, onExit, className, children }: Plai
     (error: any, metadata: any) => {
       console.log("Plaid Link Exit:", { error, metadata })
       logPlaidEvent("EXIT", metadata, error)
+      window.localStorage.removeItem(LINK_TOKEN_STORAGE_KEY)
 
       if (error) {
-        window.localStorage.removeItem(LINK_TOKEN_STORAGE_KEY)
         toast({
           title: "Connection Cancelled",
           description: error.display_message || "Bank connection was not completed.",

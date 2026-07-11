@@ -121,10 +121,12 @@ export default function PlaidBankConnection() {
               <Button variant="outline" size="sm" onClick={loadAccounts} disabled={isRefreshing}>
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               </Button>
-              <PlaidLinkButton onSuccess={handleAccountConnection}>
-                <Plus className="mr-2 h-4 w-4" />
-                Connect Account
-              </PlaidLinkButton>
+              {items.length > 0 && (
+                <PlaidLinkButton onSuccess={handleAccountConnection}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Connect Account
+                </PlaidLinkButton>
+              )}
             </div>
           </div>
         </CardHeader>
