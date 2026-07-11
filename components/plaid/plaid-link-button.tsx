@@ -23,49 +23,57 @@ export function PlaidLinkButton({ onSuccess, onExit, className, children }: Plai
   const [loading, setLoading] = useState(false)
   const [setupError, setSetupError] = useState<string | null>(null)
   const [receivedRedirectUri, setReceivedRedirectUri] = useState<string | undefined>()
+  const [shouldOpen, setShouldOpen] = useState(false)
   const { toast } = useToast()
 
-  useEffect(() => {
-    async function createLinkToken() {
-      try {
-        const isOAuthRedirect =
-          typeof window !== "undefined" && new URLSearchParams(window.location.search).has("oauth_state_id")
-        const storedToken = typeof window !== "undefined" ? window.localStorage.getItem(LINK_TOKEN_STORAGE_KEY) : null
+  const clearStoredToken = useCallback(() => {
+    window.localStorage.removeItem(LINK_TOKEN_STORAGE_KEY)
+    setLinkToken(null)
+    setReceivedRedirectUri(undefined)
+  }, [])
 
-        if (isOAuthRedirect && storedToken) {
-          setReceivedRedirectUri(window.location.href)
-          setLinkToken(storedToken)
-          return
-        }
+  const createLinkToken = useCallback(async () => {
+    try {
+      const isOAuthRedirect =
+        typeof window !== "undefined" && new URLSearchParams(window.location.search).has("oauth_state_id")
+      const storedToken = typeof window !== "undefined" ? window.localStorage.getItem(LINK_TOKEN_STORAGE_KEY) : null
 
-        window.localStorage.removeItem(LINK_TOKEN_STORAGE_KEY)
-
-        const response = await fetch("/api/plaid/create-link-token", {
-          method: "POST",
-        })
-
-        if (!response.ok) {
-          const data = await response.json().catch(() => null)
-          throw new Error(data?.error || "Failed to create link token")
-        }
-
-        const data = await response.json()
-        setLinkToken(data.link_token)
+      if (isOAuthRedirect && storedToken) {
+        setReceivedRedirectUri(window.location.href)
+        setLinkToken(storedToken)
         setSetupError(null)
-        window.localStorage.setItem(LINK_TOKEN_STORAGE_KEY, data.link_token)
-      } catch (error) {
-        console.error("Error creating link token:", error)
-        const message = error instanceof Error ? error.message : "Failed to initialize Plaid. Please try again."
-        setSetupError(message)
-        toast({
-          title: "Plaid is not ready",
-          description: message,
-          variant: "destructive",
-        })
+        return true
       }
-    }
 
-    createLinkToken()
+      window.localStorage.removeItem(LINK_TOKEN_STORAGE_KEY)
+
+      const response = await fetch("/api/plaid/create-link-token", {
+        method: "POST",
+        cache: "no-store",
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.error || "Failed to create link token")
+      }
+
+      const data = await response.json()
+      setLinkToken(data.link_token)
+      setSetupError(null)
+      window.localStorage.setItem(LINK_TOKEN_STORAGE_KEY, data.link_token)
+      return true
+    } catch (error) {
+      console.error("Error creating link token:", error)
+      const message = error instanceof Error ? error.message : "Failed to initialize Plaid. Please try again."
+      setSetupError(message)
+      setShouldOpen(false)
+      toast({
+        title: "Plaid is not ready",
+        description: message,
+        variant: "destructive",
+      })
+      return false
+    }
   }, [toast])
 
   const handleOnSuccess = useCallback(
@@ -93,7 +101,7 @@ export function PlaidLinkButton({ onSuccess, onExit, className, children }: Plai
         }
 
         const data = await response.json()
-        window.localStorage.removeItem(LINK_TOKEN_STORAGE_KEY)
+        clearStoredToken()
 
         toast({
           title: "Bank Connected Successfully!",
@@ -105,6 +113,7 @@ export function PlaidLinkButton({ onSuccess, onExit, className, children }: Plai
         }
       } catch (error) {
         console.error("Error exchanging token:", error)
+        clearStoredToken()
         toast({
           title: "Error",
           description: error instanceof Error ? error.message : "Failed to connect bank account. Please try again.",
@@ -114,14 +123,15 @@ export function PlaidLinkButton({ onSuccess, onExit, className, children }: Plai
         setLoading(false)
       }
     },
-    [toast, onSuccess],
+    [clearStoredToken, toast, onSuccess],
   )
 
   const handleOnExit = useCallback(
     (error: any, metadata: any) => {
       console.log("Plaid Link Exit:", { error, metadata })
       logPlaidEvent("EXIT", metadata, error)
-      window.localStorage.removeItem(LINK_TOKEN_STORAGE_KEY)
+      clearStoredToken()
+      setShouldOpen(false)
 
       if (error) {
         toast({
@@ -135,7 +145,7 @@ export function PlaidLinkButton({ onSuccess, onExit, className, children }: Plai
         onExit()
       }
     },
-    [toast, onExit],
+    [clearStoredToken, toast, onExit],
   )
 
   const handleOnEvent = useCallback((eventName: string, metadata: any) => {
@@ -152,21 +162,38 @@ export function PlaidLinkButton({ onSuccess, onExit, className, children }: Plai
 
   const { open, ready } = usePlaidLink(config)
 
-  const handleClick = () => {
-    if (ready) {
+  useEffect(() => {
+    if (shouldOpen && ready && linkToken) {
+      setShouldOpen(false)
       open()
+    }
+  }, [shouldOpen, ready, linkToken, open])
+
+  const handleClick = async () => {
+    setSetupError(null)
+
+    if (linkToken && ready) {
+      open()
+      return
+    }
+
+    setLoading(true)
+    setShouldOpen(true)
+    const created = await createLinkToken()
+    setLoading(false)
+
+    if (!created) {
+      setShouldOpen(false)
     }
   }
 
   return (
-    <Button onClick={handleClick} disabled={!ready || loading || Boolean(setupError)} className={className}>
+    <Button onClick={handleClick} disabled={loading || Boolean(linkToken && !ready)} className={className}>
       {loading ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Connecting...
         </>
-      ) : setupError ? (
-        "Plaid setup issue"
       ) : (
         children || "Connect Bank Account"
       )}
