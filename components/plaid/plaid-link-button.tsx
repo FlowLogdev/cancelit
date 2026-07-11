@@ -7,6 +7,7 @@ import { usePlaidLink } from "react-plaid-link"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
+import { logPlaidEvent } from "@/components/plaid/plaid-link-events"
 
 interface PlaidLinkButtonProps {
   onSuccess?: (result?: { itemId?: string; institution?: string }) => void
@@ -16,18 +17,6 @@ interface PlaidLinkButtonProps {
 }
 
 const LINK_TOKEN_STORAGE_KEY = "cancelit_plaid_link_token"
-
-function logPlaidEvent(eventName: string, metadata?: any, error?: any) {
-  fetch("/api/plaid/link-event", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ eventName, metadata, error }),
-  }).catch((logError) => {
-    console.warn("Failed to log Plaid Link event:", logError)
-  })
-}
 
 export function PlaidLinkButton({ onSuccess, onExit, className, children }: PlaidLinkButtonProps) {
   const [linkToken, setLinkToken] = useState<string | null>(null)
@@ -132,6 +121,7 @@ export function PlaidLinkButton({ onSuccess, onExit, className, children }: Plai
       logPlaidEvent("EXIT", metadata, error)
 
       if (error) {
+        window.localStorage.removeItem(LINK_TOKEN_STORAGE_KEY)
         toast({
           title: "Connection Cancelled",
           description: error.display_message || "Bank connection was not completed.",

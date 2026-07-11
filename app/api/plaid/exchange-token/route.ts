@@ -16,6 +16,12 @@ const configuration = new Configuration({
 
 const plaidClient = new PlaidApi(configuration)
 
+type ExistingPlaidInstitution = {
+  item_id: string
+  institution_name: string | null
+  status: string | null
+}
+
 export async function POST(request: Request) {
   try {
     if (!process.env.PLAID_CLIENT_ID || !process.env.PLAID_SECRET) {
@@ -33,11 +39,44 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // The generated Supabase types in this repo are stale and mark Plaid tables as never.
+    // Keep the cast local to this route until the database types are regenerated.
+    const plaidDb = supabase as any
+
     const body = await request.json()
     const { public_token, institution, accounts } = body
 
     if (!public_token) {
       return NextResponse.json({ error: "Public token is required" }, { status: 400 })
+    }
+
+    if (institution?.institution_id) {
+      const { data: existingInstitutionData, error: existingInstitutionError } = await plaidDb
+        .from("plaid_items")
+        .select("item_id,institution_name,status")
+        .eq("user_id", user.id)
+        .eq("institution_id", institution.institution_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (existingInstitutionError) {
+        console.error("Error checking existing Plaid institution:", existingInstitutionError)
+        throw new Error("Failed to check existing bank connections")
+      }
+
+      const existingInstitution = existingInstitutionData as ExistingPlaidInstitution | null
+
+      if (existingInstitution) {
+        return NextResponse.json(
+          {
+            error: `${existingInstitution.institution_name || institution.name || "This bank"} is already connected. Use the existing connection instead of adding the same bank again.`,
+            code: "DUPLICATE_INSTITUTION",
+            item_id: existingInstitution.item_id,
+          },
+          { status: 409 },
+        )
+      }
     }
 
     const exchangeResponse = await plaidClient.itemPublicTokenExchange({
@@ -47,7 +86,7 @@ export async function POST(request: Request) {
     const accessToken = exchangeResponse.data.access_token
     const itemId = exchangeResponse.data.item_id
 
-    const { error: dbError } = await supabase
+    const { error: dbError } = await plaidDb
       .from("plaid_items")
       .upsert(
         {
@@ -80,7 +119,7 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
       }))
 
-      const { error: accountsError } = await supabase
+      const { error: accountsError } = await plaidDb
         .from("plaid_accounts")
         .upsert(accountData, { onConflict: "user_id,account_id" })
 

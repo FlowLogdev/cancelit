@@ -5,6 +5,7 @@ import { usePlaidLink } from "react-plaid-link"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
+import { logPlaidEvent } from "@/components/plaid/plaid-link-events"
 
 const LINK_TOKEN_STORAGE_KEY = "cancelit_plaid_link_token"
 
@@ -58,7 +59,8 @@ export default function PlaidOAuthPage() {
     [toast],
   )
 
-  const onExit = useCallback((plaidError: any) => {
+  const onExit = useCallback((plaidError: any, metadata: any) => {
+    logPlaidEvent("OAUTH_EXIT", metadata, plaidError)
     if (plaidError) {
       setError(plaidError.display_message || plaidError.error_message || "The bank connection was not completed.")
     } else {
@@ -66,11 +68,16 @@ export default function PlaidOAuthPage() {
     }
   }, [])
 
+  const onEvent = useCallback((eventName: string, metadata: any) => {
+    logPlaidEvent(`OAUTH_${eventName}`, metadata)
+  }, [])
+
   const { open, ready } = usePlaidLink({
     token: linkToken,
     receivedRedirectUri: typeof window !== "undefined" ? window.location.href : undefined,
     onSuccess,
     onExit,
+    onEvent,
   })
 
   useEffect(() => {
