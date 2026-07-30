@@ -4,6 +4,7 @@ import type React from "react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { CancelItLogo } from "@/components/brand/cancelit-logo"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -220,7 +221,7 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-red-500" />
       </div>
     )
   }
@@ -234,12 +235,7 @@ export default function SettingsPage() {
       {/* Header */}
       <header className="bg-white border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-              <CreditCard className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-gray-900">CancelIt</span>
-          </div>
+          <CancelItLogo imageClassName="h-9 w-9" textClassName="text-xl text-gray-900" />
 
           <div className="flex items-center space-x-4">
             <Button
@@ -463,7 +459,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               {subscriptionInfo ? (
                 <>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="bg-black/[0.03] border border-black/10 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-700">Current Plan</span>
                       <span

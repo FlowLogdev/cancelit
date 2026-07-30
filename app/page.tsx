@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button"
+import { CancelItLogo } from "@/components/brand/cancelit-logo"
 import Threads from "@/components/threads"
 import {
   ArrowRight,
@@ -11,8 +12,8 @@ import {
   ReceiptText,
   ShieldCheck,
   TrendingDown,
-  WalletCards,
 } from "lucide-react"
+import Image from "next/image"
 import Link from "next/link"
 
 const stats = [
@@ -88,14 +89,7 @@ export default function Home() {
 
       <nav className="sticky top-0 z-50 border-b border-white/[0.07] bg-black/82 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2" aria-label="CancelIt home">
-            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-red-500 text-white">
-              <WalletCards className="h-4 w-4" />
-            </span>
-            <span className="text-xl font-black tracking-tight">
-              Cancel<span className="text-red-500">It</span>
-            </span>
-          </Link>
+          <CancelItLogo imageClassName="h-9 w-9" />
 
           <div className="hidden items-center gap-7 md:flex">
             <a href="#how" className="text-sm text-white/58 transition-colors hover:text-white">
@@ -126,8 +120,23 @@ export default function Home() {
 
       <section className="relative z-10 mx-auto grid min-h-[calc(100dvh-4rem)] max-w-7xl items-center gap-12 px-4 pb-20 pt-14 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:pb-24 lg:pt-16">
         <div>
-          <div className="mb-7 inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.045] px-3 py-1.5 text-sm font-medium text-white/62">
-            Subscription audit for cards and bank accounts
+          <div className="mb-7 flex items-center gap-4">
+            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-black shadow-lg shadow-red-500/15">
+              <Image
+                src="/brand/cancelit-logo.jpg"
+                alt="CancelIt App logo"
+                fill
+                sizes="64px"
+                priority
+                className="object-cover"
+              />
+            </div>
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-red-300">
+                Cancel subscriptions
+              </div>
+              <div className="mt-1 text-sm text-white/48">Save time. Take control.</div>
+            </div>
           </div>
 
           <h1 className="max-w-4xl text-balance text-5xl font-black leading-[0.98] tracking-tight sm:text-6xl lg:text-7xl">
@@ -170,9 +179,12 @@ export default function Home() {
           <div className="absolute -inset-6 -z-10 rounded-[2rem] bg-red-500/10 blur-3xl" />
           <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0b0b0b]/95 shadow-2xl shadow-black/70">
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-white/34">Sample dashboard</p>
-                <h2 className="mt-1 text-xl font-semibold">Review queue</h2>
+              <div className="flex items-center gap-3">
+                <CancelItLogo href="" showText={false} imageClassName="h-10 w-10 rounded-xl" />
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-white/34">Sample dashboard</p>
+                  <h2 className="mt-1 text-xl font-semibold">Review queue</h2>
+                </div>
               </div>
               <div className="rounded-md bg-red-500/12 px-2.5 py-1 text-xs font-medium text-red-200">
                 $90.96/mo
@@ -342,7 +354,10 @@ export default function Home() {
 
       <footer className="relative z-10 border-t border-white/[0.07] py-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 text-sm text-white/42 sm:px-6 md:flex-row md:items-center md:justify-between">
-          <p>CancelIt. Subscription control for people who prefer fewer surprise charges.</p>
+          <div className="flex items-center gap-3">
+            <CancelItLogo href="" showText={false} imageClassName="h-8 w-8 rounded-md" />
+            <p>CancelIt. Subscription control for people who prefer fewer surprise charges.</p>
+          </div>
           <div className="flex gap-5">
             <Link href="/pricing" className="hover:text-white">
               Pricing

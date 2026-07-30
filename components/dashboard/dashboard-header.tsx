@@ -2,7 +2,7 @@
 
 import { Bell, LogOut, Settings, User } from "lucide-react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
+import { CancelItLogo } from "@/components/brand/cancelit-logo"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import {
@@ -30,11 +30,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-black/90 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6">
-        <Link href="/" className="flex items-center">
-          <span className="text-xl font-black tracking-tight">
-            Cancel<span className="text-red-500">It</span>
-          </span>
-        </Link>
+        <CancelItLogo imageClassName="h-9 w-9" />
 
         <div className="flex items-center gap-2">
           <Button

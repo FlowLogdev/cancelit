@@ -4,6 +4,7 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { CancelItLogo } from "@/components/brand/cancelit-logo"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -82,26 +83,32 @@ export default function ForgotPasswordPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <Card className="w-full max-w-md border-white/[0.08] bg-[#0F0F0F] text-white">
           <CardContent className="pt-6">
             <div className="text-center">
+              <CancelItLogo
+                href=""
+                className="mx-auto mb-5 justify-center"
+                imageClassName="h-14 w-14 rounded-2xl"
+                textClassName="text-2xl"
+              />
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
 
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Check Your Email</h2>
+              <h2 className="text-2xl font-bold text-white mb-2">Check Your Email</h2>
 
-              <p className="text-gray-600 mb-6">
+              <p className="text-white/55 mb-6">
                 If an account exists for <strong>{email}</strong>, you will receive a password reset link shortly.
               </p>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
-                <h3 className="font-semibold text-blue-900 mb-2 flex items-center">
+              <div className="bg-white/[0.04] border border-white/10 rounded-lg p-4 mb-6 text-left">
+                <h3 className="font-semibold text-white mb-2 flex items-center">
                   <Mail className="w-4 h-4 mr-2" />
                   What to do next:
                 </h3>
-                <ul className="text-sm text-blue-800 space-y-2">
+                <ul className="text-sm text-white/62 space-y-2">
                   <li className="flex items-start">
                     <span className="mr-2">1.</span>
                     <span>Check your email inbox (and spam/junk folder)</span>
@@ -153,7 +160,7 @@ export default function ForgotPasswordPage() {
                 </Button>
               </div>
 
-              <p className="text-sm text-gray-500 mt-4">Redirecting to sign in page in 10 seconds...</p>
+              <p className="text-sm text-white/42 mt-4">Redirecting to sign in page in 10 seconds...</p>
             </div>
           </CardContent>
         </Card>
@@ -162,14 +169,19 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <Card className="w-full max-w-md border-white/[0.08] bg-[#0F0F0F] text-white">
         <CardHeader className="text-center">
-          <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <Mail className="w-6 h-6 text-white" />
-          </div>
+          <CancelItLogo
+            href=""
+            className="mx-auto mb-4 justify-center"
+            imageClassName="h-14 w-14 rounded-2xl"
+            textClassName="text-2xl"
+          />
           <CardTitle className="text-2xl font-bold">Forgot Password?</CardTitle>
-          <CardDescription>Enter your email address and we'll send you a link to reset your password</CardDescription>
+          <CardDescription className="text-white/45">
+            Enter your email address and we'll send you a link to reset your password
+          </CardDescription>
         </CardHeader>
 
         <CardContent>
@@ -222,7 +234,7 @@ export default function ForgotPasswordPage() {
             </Button>
           </div>
 
-          <div className="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-4 text-xs text-gray-600">
+          <div className="mt-6 bg-white/[0.04] border border-white/10 rounded-lg p-4 text-xs text-white/45">
             <p className="font-semibold mb-2">Security & Privacy:</p>
             <ul className="space-y-1 list-disc list-inside">
               <li>We won't reveal whether an email exists in our system</li>

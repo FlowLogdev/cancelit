@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { CancelItLogo } from "@/components/brand/cancelit-logo"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Check } from "lucide-react"
@@ -126,8 +127,16 @@ export default function PricingPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
+          <CancelItLogo
+            href="/"
+            className="mb-6 justify-center"
+            imageClassName="h-12 w-12 rounded-xl"
+            textClassName="text-2xl text-gray-900"
+          />
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Choose Your Plan</h1>
-          <p className="text-xl text-gray-600">Plaid can detect recurring charges, but each plan controls how many matches you can manage.</p>
+          <p className="text-xl text-gray-600">
+            Plaid can detect recurring charges, but each plan controls how many matches you can manage.
+          </p>
         </div>
 
         {/* Pricing Cards */}
@@ -135,11 +144,13 @@ export default function PricingPage() {
           {plans.map((plan) => (
             <Card
               key={plan.name}
-              className={`relative ${plan.popular ? "border-2 border-blue-500 shadow-lg" : "border border-gray-200"}`}
+              className={`relative ${
+                plan.popular ? "border-2 border-red-500 shadow-lg shadow-red-500/10" : "border border-gray-200"
+              }`}
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <Badge className="bg-blue-500 text-white px-4 py-1">Most Popular</Badge>
+                  <Badge className="bg-red-500 text-white px-4 py-1">Most Popular</Badge>
                 </div>
               )}
               <CardHeader>
@@ -162,7 +173,7 @@ export default function PricingPage() {
               </CardContent>
               <CardFooter>
                 <Button
-                  className={`w-full ${plan.popular ? "bg-blue-600 hover:bg-blue-700" : ""}`}
+                  className={`w-full ${plan.popular ? "bg-red-500 hover:bg-red-600" : ""}`}
                   onClick={() => (plan.free ? router.push("/signup") : handleSubscribe(plan.priceId, plan.name))}
                   disabled={loadingPlan !== null}
                 >

@@ -4,10 +4,11 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { CancelItLogo } from "@/components/brand/cancelit-logo"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Lock, Eye, EyeOff, CreditCard, AlertCircle, CheckCircle } from "lucide-react"
+import { Lock, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
 export default function ResetPassword() {
@@ -105,12 +106,18 @@ export default function ResetPassword() {
 
   if (isCheckingLink) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <Card className="w-full max-w-md border-white/[0.08] bg-[#0F0F0F] text-white">
           <CardContent className="p-6 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Verifying Reset Link</h2>
-            <p className="text-gray-600">Please wait while we verify your password reset link...</p>
+            <CancelItLogo
+              href=""
+              className="mx-auto mb-5 justify-center"
+              imageClassName="h-14 w-14 rounded-2xl"
+              textClassName="text-2xl"
+            />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-4"></div>
+            <h2 className="text-xl font-semibold text-white mb-2">Verifying Reset Link</h2>
+            <p className="text-white/50">Please wait while we verify your password reset link...</p>
           </CardContent>
         </Card>
       </div>
@@ -119,17 +126,23 @@ export default function ResetPassword() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <Card className="w-full max-w-md border-white/[0.08] bg-[#0F0F0F] text-white">
           <CardContent className="p-6 text-center">
+            <CancelItLogo
+              href=""
+              className="mx-auto mb-5 justify-center"
+              imageClassName="h-14 w-14 rounded-2xl"
+              textClassName="text-2xl"
+            />
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Password Updated Successfully!</h2>
-            <p className="text-gray-600 mb-4">
+            <h2 className="text-2xl font-bold text-white mb-2">Password Updated Successfully!</h2>
+            <p className="text-white/55 mb-4">
               Your password has been successfully updated. You can now sign in with your new password.
             </p>
-            <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md text-sm">
+            <div className="bg-white/[0.04] border border-white/10 text-white/60 px-4 py-3 rounded-md text-sm">
               Redirecting to sign in page in a few seconds...
             </div>
           </CardContent>
@@ -140,20 +153,22 @@ export default function ResetPassword() {
 
   if (!isValidLink && error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <Card className="w-full max-w-md border-white/[0.08] bg-[#0F0F0F] text-white">
           <CardHeader className="text-center">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <CreditCard className="w-5 h-5 text-white" />
-            </div>
-            <CardTitle className="text-2xl font-bold">CancelIt</CardTitle>
+            <CancelItLogo
+              href=""
+              className="mx-auto justify-center"
+              imageClassName="h-14 w-14 rounded-2xl"
+              textClassName="text-2xl"
+            />
           </CardHeader>
           <CardContent className="text-center">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="w-8 h-8 text-red-600" />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Invalid Reset Link</h2>
-            <p className="text-gray-600 mb-6">{error}</p>
+            <h2 className="text-xl font-semibold text-white mb-2">Invalid Reset Link</h2>
+            <p className="text-white/55 mb-6">{error}</p>
 
             <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-md text-sm mb-6">
               <strong>Common Issues:</strong>
@@ -174,14 +189,19 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <Card className="w-full max-w-md border-white/[0.08] bg-[#0F0F0F] text-white">
         <CardHeader className="text-center">
-          <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <CreditCard className="w-5 h-5 text-white" />
-          </div>
+          <CancelItLogo
+            href=""
+            className="mx-auto mb-4 justify-center"
+            imageClassName="h-14 w-14 rounded-2xl"
+            textClassName="text-2xl"
+          />
           <CardTitle className="text-2xl font-bold">Reset Your Password</CardTitle>
-          <CardDescription>Enter your new password below to complete the reset process</CardDescription>
+          <CardDescription className="text-white/45">
+            Enter your new password below to complete the reset process
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
@@ -220,7 +240,7 @@ export default function ResetPassword() {
                   )}
                 </Button>
               </div>
-              <p className="text-xs text-gray-500">Password must be at least 10 characters long</p>
+              <p className="text-xs text-white/42">Password must be at least 10 characters long</p>
             </div>
 
             <div className="space-y-2">
@@ -255,7 +275,7 @@ export default function ResetPassword() {
             </Button>
           </div>
 
-          <div className="mt-4 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md text-xs">
+          <div className="mt-4 bg-white/[0.04] border border-white/10 text-white/50 px-4 py-3 rounded-md text-xs">
             <strong>Security Notice:</strong> After updating your password, you'll be automatically signed out and
             redirected to the sign-in page for security purposes.
           </div>

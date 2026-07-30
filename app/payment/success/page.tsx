@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle2, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { CancelItLogo } from "@/components/brand/cancelit-logo"
 
 export default function PaymentSuccessPage() {
   const router = useRouter()
@@ -76,6 +77,12 @@ export default function PaymentSuccessPage() {
       <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
         <Card className="w-full max-w-md bg-gray-900 border-gray-800">
           <CardHeader className="text-center">
+            <CancelItLogo
+              href=""
+              className="mb-4 justify-center"
+              imageClassName="h-14 w-14 rounded-2xl"
+              textClassName="text-2xl"
+            />
             <div className="flex justify-center mb-4">
               <Loader2 className="h-16 w-16 text-green-500 animate-spin" />
             </div>
@@ -92,6 +99,12 @@ export default function PaymentSuccessPage() {
       <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
         <Card className="w-full max-w-md bg-gray-900 border-gray-800">
           <CardHeader className="text-center">
+            <CancelItLogo
+              href=""
+              className="mb-4 justify-center"
+              imageClassName="h-14 w-14 rounded-2xl"
+              textClassName="text-2xl"
+            />
             <div className="flex justify-center mb-4">
               <AlertCircle className="h-16 w-16 text-red-500" />
             </div>
@@ -124,10 +137,16 @@ export default function PaymentSuccessPage() {
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
       <Card className="w-full max-w-md bg-gray-900 border-gray-800">
         <CardHeader className="text-center">
+          <CancelItLogo
+            href=""
+            className="mb-4 justify-center"
+            imageClassName="h-14 w-14 rounded-2xl"
+            textClassName="text-2xl"
+          />
           <div className="flex justify-center mb-4">
             <CheckCircle2 className="h-16 w-16 text-green-500" />
           </div>
-          <CardTitle className="text-2xl text-white">Payment Successful! 🎉</CardTitle>
+          <CardTitle className="text-2xl text-white">Payment Successful</CardTitle>
           <CardDescription className="text-gray-400">
             Thank you for subscribing to CancelIt {paymentData?.planName || "Pro"}
           </CardDescription>
@@ -158,7 +177,7 @@ export default function PaymentSuccessPage() {
           </div>
 
           <Button onClick={() => router.push("/dashboard")} className="w-full bg-red-600 hover:bg-red-700">
-            Go to Dashboard Now →
+            Go to Dashboard Now
           </Button>
         </CardContent>
       </Card>

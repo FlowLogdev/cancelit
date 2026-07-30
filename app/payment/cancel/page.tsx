@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { CancelItLogo } from "@/components/brand/cancelit-logo"
 import { XCircle, ArrowLeft, RefreshCw } from "lucide-react"
 
 export default function PaymentCancelPage() {
@@ -12,6 +13,12 @@ export default function PaymentCancelPage() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center pb-4">
+          <CancelItLogo
+            href="/"
+            className="mb-5 justify-center"
+            imageClassName="h-14 w-14 rounded-2xl"
+            textClassName="text-2xl text-gray-900"
+          />
           <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <XCircle className="h-12 w-12 text-orange-600" />
           </div>
@@ -30,7 +37,7 @@ export default function PaymentCancelPage() {
           </div>
 
           <div className="space-y-3">
-            <Button onClick={() => router.push("/pricing")} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+            <Button onClick={() => router.push("/pricing")} className="w-full bg-red-500 hover:bg-red-600 text-white">
               <RefreshCw className="mr-2 h-4 w-4" />
               Try Again
             </Button>

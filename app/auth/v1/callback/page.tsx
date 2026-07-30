@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { CancelItLogo } from "@/components/brand/cancelit-logo"
 import { supabase } from "@/lib/supabase"
 
 export default function AuthV1Callback() {
@@ -40,11 +41,17 @@ export default function AuthV1Callback() {
   }, [router])
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+    <div className="flex items-center justify-center min-h-screen bg-black p-4 text-white">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Completing authentication...</h2>
-        <p className="text-gray-600">Please wait while we sign you in.</p>
+        <CancelItLogo
+          href=""
+          className="mx-auto mb-5 justify-center"
+          imageClassName="h-14 w-14 rounded-2xl"
+          textClassName="text-2xl"
+        />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
+        <h2 className="text-xl font-semibold text-white mb-2">Completing authentication...</h2>
+        <p className="text-white/50">Please wait while we sign you in.</p>
       </div>
     </div>
   )

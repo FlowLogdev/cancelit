@@ -5,6 +5,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { AlertCircle, ArrowLeft, Loader2, Lock, Mail } from "lucide-react"
+import { CancelItLogo } from "@/components/brand/cancelit-logo"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -69,12 +70,12 @@ export default function SignInPage() {
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
       <Card className="w-full max-w-md bg-[#0F0F0F] border-white/[0.08]">
         <CardHeader className="text-center">
-          <div className="w-12 h-12 bg-red-500/10 border border-red-500/25 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Lock className="w-5 h-5 text-red-500" />
-          </div>
-          <div className="text-2xl font-black tracking-tight mb-0.5">
-            Cancel<span className="text-red-500">It</span>
-          </div>
+          <CancelItLogo
+            href=""
+            className="mx-auto mb-4 justify-center"
+            imageClassName="h-14 w-14 rounded-2xl"
+            textClassName="text-2xl"
+          />
           <CardTitle className="text-xl font-semibold">Welcome back</CardTitle>
           <CardDescription className="text-white/45">Sign in to your account</CardDescription>
         </CardHeader>

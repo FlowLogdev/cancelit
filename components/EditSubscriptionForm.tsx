@@ -126,7 +126,7 @@ export function EditSubscriptionForm({ subscription, onSuccess }: EditSubscripti
         />
       </div>
 
-      <Button type="submit" disabled={loading} className="w-full bg-blue-500 hover:bg-blue-600 text-white">
+      <Button type="submit" disabled={loading} className="w-full bg-red-500 hover:bg-red-600 text-white">
         {loading ? (
           <>
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />

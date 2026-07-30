@@ -5,6 +5,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { CancelItLogo } from "@/components/brand/cancelit-logo"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -173,28 +174,34 @@ export default function SignUpPage() {
 
   if (showSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
-        <Card className="w-full max-w-md shadow-xl border-0">
+      <div className="min-h-screen flex items-center justify-center bg-black p-4">
+        <Card className="w-full max-w-md border-white/[0.08] bg-[#0F0F0F] shadow-2xl shadow-black/60">
           <CardHeader className="text-center space-y-4">
-            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle2 className="h-8 w-8 text-green-600" />
+            <CancelItLogo
+              href=""
+              className="mx-auto justify-center"
+              imageClassName="h-16 w-16 rounded-2xl"
+              textClassName="text-2xl"
+            />
+            <div className="mx-auto w-12 h-12 bg-green-500/10 border border-green-500/25 rounded-full flex items-center justify-center">
+              <CheckCircle2 className="h-7 w-7 text-green-400" />
             </div>
-            <CardTitle className="text-2xl font-bold text-gray-900">Welcome to CancelIt</CardTitle>
-            <CardDescription className="text-base">
+            <CardTitle className="text-2xl font-bold text-white">Welcome to CancelIt</CardTitle>
+            <CardDescription className="text-base text-white/50">
               Your account has been created for <strong>{email}</strong>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800 mb-2">
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+              <p className="text-sm text-red-100 mb-2">
                 <strong>Important:</strong> Check your email to confirm your account.
               </p>
-              <p className="text-sm text-blue-800">
+              <p className="text-sm text-white/58">
                 You'll be redirected to your free dashboard in a moment. Free accounts can scan up to 5 subscriptions
                 with Plaid.
               </p>
             </div>
-            <Button onClick={() => router.push("/dashboard")} className="w-full">
+            <Button onClick={() => router.push("/dashboard")} className="w-full bg-red-500 text-white hover:bg-red-600">
               Open Dashboard
             </Button>
           </CardContent>
@@ -216,9 +223,12 @@ export default function SignUpPage() {
 
         <Card className="bg-[#0F0F0F] border-white/[0.08]">
           <CardHeader className="space-y-1 text-center">
-            <div className="text-2xl font-black tracking-tight mb-1">
-              Cancel<span className="text-red-500">It</span>
-            </div>
+            <CancelItLogo
+              href=""
+              className="mx-auto mb-3 justify-center"
+              imageClassName="h-14 w-14 rounded-2xl"
+              textClassName="text-2xl"
+            />
             <CardTitle className="text-xl font-semibold">Create your account</CardTitle>
             <CardDescription className="text-white/45">Start discovering forgotten subscriptions</CardDescription>
           </CardHeader>
@@ -317,7 +327,7 @@ export default function SignUpPage() {
                 {password && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-600">Password strength:</span>
+                      <span className="text-white/45">Password strength:</span>
                       <span
                         className={`font-medium ${
                           passwordStrength < 40
@@ -337,7 +347,7 @@ export default function SignUpPage() {
                       className="h-2"
                       indicatorClassName={getPasswordStrengthColor(passwordStrength)}
                     />
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-white/42">
                       Use more than 10 characters with a mix of letters, numbers & symbols
                     </p>
                   </div>
@@ -346,7 +356,7 @@ export default function SignUpPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="w-full bg-red-500 text-white font-semibold py-6 rounded-lg transition-all duration-200 shadow-lg shadow-red-500/15 hover:bg-red-600"
                 disabled={isLoading}
               >
                 {isLoading ? (
