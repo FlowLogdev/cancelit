@@ -5,7 +5,13 @@ import Stripe from "stripe"
 export async function POST() {
   try {
     if (!process.env.STRIPE_SECRET_KEY) {
-      return NextResponse.json({ error: "Stripe is not configured" }, { status: 500 })
+      return NextResponse.json(
+        {
+          error:
+            "Billing portal is not connected yet. Please choose a plan or contact support to update your payment method.",
+        },
+        { status: 503 },
+      )
     }
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -31,7 +37,7 @@ export async function POST() {
       .single()
 
     if (customerError || !customer?.stripe_customer_id) {
-      return NextResponse.json({ error: "Customer not found" }, { status: 404 })
+      return NextResponse.json({ error: "No paid subscription found. Choose a plan first." }, { status: 404 })
     }
 
     // Create a billing portal session
