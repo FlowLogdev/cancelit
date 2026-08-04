@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { CancelItLogo } from "@/components/brand/cancelit-logo"
 import { Reveal } from "@/components/marketing/reveal"
+import { SignupActivityToast } from "@/components/marketing/signup-activity-toast"
 import { SiteNav } from "@/components/marketing/site-nav"
 import { SiteFooter } from "@/components/marketing/site-footer"
 import Threads from "@/components/threads"
@@ -111,6 +112,8 @@ const plans = [
 export default function Home() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-black text-white">
+      <SignupActivityToast />
+
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-black">
         <div
           className="absolute left-1/2 top-[-12rem] -translate-x-1/2 opacity-80"
