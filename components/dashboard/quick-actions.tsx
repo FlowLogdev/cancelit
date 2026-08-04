@@ -2,25 +2,62 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, CreditCard, Bell, BarChart3, Settings, Download, Search } from "lucide-react"
+import { Plus, CreditCard, Bell, BarChart3, Settings, Download } from "lucide-react"
 import { useRouter } from "next/navigation"
 
-export function QuickActions() {
+type DashboardTab = "subscriptions" | "analytics" | "notifications" | "security"
+
+interface QuickActionsProps {
+  onAddSubscription: () => void
+  onSelectTab: (tab: DashboardTab) => void
+}
+
+export function QuickActions({ onAddSubscription, onSelectTab }: QuickActionsProps) {
   const router = useRouter()
+  const [isExporting, setIsExporting] = useState(false)
   const [recentActions] = useState([
     { id: "1", action: "Added Netflix subscription", time: "2 hours ago" },
     { id: "2", action: "Cancelled Adobe subscription", time: "1 day ago" },
     { id: "3", action: "Updated Spotify billing", time: "3 days ago" },
   ])
 
+  const exportData = async () => {
+    try {
+      setIsExporting(true)
+      const response = await fetch("/api/subscriptions")
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not export subscriptions")
+      }
+
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        subscriptions: data.subscriptions || [],
+      }
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `cancelit-subscriptions-${new Date().toISOString().slice(0, 10)}.json`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Could not export subscriptions")
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   const quickActions = [
     {
       title: "Add Subscription",
       description: "Manually add a new subscription",
       icon: <Plus className="h-4 w-4" />,
-      action: () => console.log("Open add subscription modal"),
+      action: onAddSubscription,
     },
     {
       title: "Connect Bank",
@@ -32,19 +69,20 @@ export function QuickActions() {
       title: "Analytics",
       description: "See spending insights",
       icon: <BarChart3 className="h-4 w-4" />,
-      action: () => router.push("/dashboard?tab=analytics"),
+      action: () => onSelectTab("analytics"),
     },
     {
       title: "Alerts",
       description: "Configure notifications",
       icon: <Bell className="h-4 w-4" />,
-      action: () => router.push("/dashboard?tab=alerts"),
+      action: () => onSelectTab("notifications"),
     },
     {
       title: "Export",
       description: "Download your data",
       icon: <Download className="h-4 w-4" />,
-      action: () => console.log("Export data"),
+      action: exportData,
+      disabled: isExporting,
     },
     {
       title: "Settings",
@@ -60,18 +98,21 @@ export function QuickActions() {
       description: "You have 2 subscriptions you haven't used in 30 days",
       badge: "Action Needed",
       badgeVariant: "destructive" as const,
+      action: () => onSelectTab("subscriptions"),
     },
     {
       title: "Set Up Price Alerts",
       description: "Get notified when subscription prices change",
       badge: "Recommended",
       badgeVariant: "default" as const,
+      action: () => onSelectTab("notifications"),
     },
     {
       title: "Request Cancellation Help",
       description: "Get a checklist and status trail for subscriptions you want to stop",
       badge: "Guided",
       badgeVariant: "secondary" as const,
+      action: () => onSelectTab("subscriptions"),
     },
   ]
 
@@ -82,7 +123,9 @@ export function QuickActions() {
         {quickActions.map((action, i) => (
           <button
             key={i}
+            type="button"
             onClick={action.action}
+            disabled={action.disabled}
             className="flex flex-col items-center gap-2 p-4 rounded-xl border border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/[0.12] transition-all group"
           >
             <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 group-hover:bg-red-500/15 transition-colors">
@@ -109,6 +152,15 @@ export function QuickActions() {
               {suggestions.map((s, i) => (
                 <div
                   key={i}
+                  role="button"
+                  tabIndex={0}
+                  onClick={s.action}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault()
+                      s.action()
+                    }
+                  }}
                   className="p-3 rounded-lg border border-white/[0.06] hover:border-white/[0.1] bg-white/[0.02] cursor-pointer transition-colors"
                 >
                   <div className="flex items-start justify-between mb-1.5">
