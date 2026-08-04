@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { SubscriptionTracker } from "@/components/dashboard/subscription-tracker"
@@ -9,22 +9,48 @@ import { SpendingAnalytics } from "@/components/dashboard/spending-analytics"
 import { SecurityPrivacy } from "@/components/dashboard/security-privacy"
 import { QuickActions } from "@/components/dashboard/quick-actions"
 import { AIChatAssistant } from "@/components/ai/ai-chat-assistant"
+import { AddSubscriptionModal } from "@/components/subscriptions/add-subscription-modal"
 import { createClient } from "@/lib/supabase/client"
 import { getPlanLimits, isAdminEmail, normalizeTier } from "@/lib/plan-limits"
 import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
 
+type DashboardTab = "subscriptions" | "analytics" | "notifications" | "security"
+
+function normalizeDashboardTab(tab: string | null): DashboardTab | null {
+  if (tab === "subscriptions" || tab === "analytics" || tab === "notifications" || tab === "security") return tab
+  if (tab === "alerts") return "notifications"
+  if (tab === "export") return "security"
+  return null
+}
+
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
   const [tier, setTier] = useState("free")
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<DashboardTab>("subscriptions")
+  const [showAddSubscription, setShowAddSubscription] = useState(false)
+  const [subscriptionRefreshKey, setSubscriptionRefreshKey] = useState(0)
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
-    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "connect-bank") {
-      router.replace("/dashboard/import")
-      return
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      const requestedTab = params.get("tab")
+
+      if (requestedTab === "connect-bank") {
+        router.replace("/dashboard/import")
+        return
+      }
+
+      if (requestedTab === "add-subscription") {
+        setActiveTab("subscriptions")
+        setShowAddSubscription(true)
+      } else {
+        const tab = normalizeDashboardTab(requestedTab)
+        if (tab) setActiveTab(tab)
+      }
     }
 
     const getUser = async () => {
@@ -57,6 +83,11 @@ export default function DashboardPage() {
     getUser()
   }, [router, supabase.auth])
 
+  const handleTabChange = (tab: DashboardTab) => {
+    setActiveTab(tab)
+    router.replace(`/dashboard?tab=${tab}`, { scroll: false })
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black">
@@ -88,9 +119,15 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <QuickActions />
+        <QuickActions
+          onAddSubscription={() => {
+            setActiveTab("subscriptions")
+            setShowAddSubscription(true)
+          }}
+          onSelectTab={handleTabChange}
+        />
 
-        <Tabs defaultValue="subscriptions" className="mt-8 space-y-6">
+        <Tabs value={activeTab} onValueChange={(value) => handleTabChange(value as DashboardTab)} className="mt-8 space-y-6">
           <TabsList className="inline-flex h-10 items-center gap-0 rounded-xl bg-white/[0.05] border border-white/[0.07] p-1">
             {[
               { value: "subscriptions", label: "Subscriptions" },
@@ -111,7 +148,7 @@ export default function DashboardPage() {
           </TabsList>
 
           <TabsContent value="subscriptions">
-            <SubscriptionTracker />
+            <SubscriptionTracker key={subscriptionRefreshKey} />
           </TabsContent>
           <TabsContent value="analytics">
             <SpendingAnalytics />
@@ -126,6 +163,15 @@ export default function DashboardPage() {
       </main>
 
       <AIChatAssistant isPaidUser={planLimits.aiAssistant} tier={tier} />
+      <AddSubscriptionModal
+        open={showAddSubscription}
+        onOpenChange={setShowAddSubscription}
+        onSuccess={() => {
+          setShowAddSubscription(false)
+          setSubscriptionRefreshKey((key) => key + 1)
+          handleTabChange("subscriptions")
+        }}
+      />
     </div>
   )
 }
