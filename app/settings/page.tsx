@@ -57,15 +57,17 @@ interface UserProfile {
 }
 
 interface SubscriptionInfo {
-  id: string
+  id?: string
   status: string
-  plan: string
-  amount: number
-  current_period_end: string
+  plan?: string
+  tier?: string
+  amount?: number
+  current_period_end?: string | number
+  billingPortalAvailable?: boolean
 }
 
 export default function SettingsPage() {
-  const { user, logout, isLoading } = useAuth()
+  const { user, signOut, loading: isLoading } = useAuth()
   const router = useRouter()
   const [isUpdating, setIsUpdating] = useState(false)
   const [isCanceling, setIsCanceling] = useState(false)
@@ -127,7 +129,7 @@ export default function SettingsPage() {
   }
 
   const handleLogout = async () => {
-    await logout()
+    await signOut()
     router.push("/")
   }
 
@@ -195,6 +197,11 @@ export default function SettingsPage() {
   }
 
   const updateBillingInfo = async () => {
+    if (!subscriptionInfo) {
+      router.push("/pricing")
+      return
+    }
+
     setIsUpdating(true)
     setMessage(null)
 
@@ -206,7 +213,6 @@ export default function SettingsPage() {
       const data = await response.json()
 
       if (response.ok && data.url) {
-        // Redirect to Stripe billing portal
         window.location.href = data.url
       } else {
         setMessage({ type: "error", text: data.error || "Failed to update billing information" })
@@ -217,6 +223,22 @@ export default function SettingsPage() {
       setIsUpdating(false)
     }
   }
+
+  const currentPlanName = subscriptionInfo?.plan || subscriptionInfo?.tier || "Paid plan"
+  const currentPlanAmount =
+    typeof subscriptionInfo?.amount === "number" ? `$${subscriptionInfo.amount.toFixed(2)}/month` : "Billing managed securely"
+  const renewalDate = (() => {
+    if (!subscriptionInfo?.current_period_end) return null
+
+    const rawValue = subscriptionInfo.current_period_end
+    const numericValue = typeof rawValue === "number" ? rawValue : Number(rawValue)
+    const date =
+      Number.isFinite(numericValue) && numericValue > 0
+        ? new Date(numericValue < 10000000000 ? numericValue * 1000 : numericValue)
+        : new Date(rawValue)
+
+    return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString()
+  })()
 
   if (isLoading) {
     return (
@@ -472,10 +494,10 @@ export default function SettingsPage() {
                         {subscriptionInfo.status}
                       </span>
                     </div>
-                    <p className="text-2xl font-bold text-gray-900 mb-1">{subscriptionInfo.plan}</p>
+                    <p className="text-2xl font-bold text-gray-900 mb-1">{currentPlanName}</p>
                     <p className="text-sm text-gray-600">
-                      ${subscriptionInfo.amount}/month • Renews on{" "}
-                      {new Date(subscriptionInfo.current_period_end).toLocaleDateString()}
+                      {currentPlanAmount}
+                      {renewalDate ? ` • Renews on ${renewalDate}` : null}
                     </p>
                   </div>
 
@@ -540,23 +562,40 @@ export default function SettingsPage() {
                 <CreditCard className="mr-2 h-5 w-5" />
                 Billing Information
               </CardTitle>
-              <CardDescription>Update your payment method and billing details.</CardDescription>
+              <CardDescription>
+                {subscriptionInfo
+                  ? "Update your payment method and billing details."
+                  : "Choose a paid plan before adding a payment method."}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <p className="text-sm text-gray-600 mb-4">
-                  Click the button below to securely update your credit card information through our payment processor.
-                </p>
-                <Button onClick={updateBillingInfo} disabled={isUpdating} className="w-full">
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  {isUpdating ? "Loading..." : "Update Payment Method"}
-                </Button>
+                {subscriptionInfo ? (
+                  <>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Open the secure billing portal to update the payment method for your active plan.
+                    </p>
+                    <Button onClick={updateBillingInfo} disabled={isUpdating} className="w-full">
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      {isUpdating ? "Loading..." : "Update Payment Method"}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-600 mb-4">
+                      There is no payment method on file yet because this account does not have an active paid plan.
+                    </p>
+                    <Button onClick={() => router.push("/pricing")} className="w-full">
+                      View Plans
+                    </Button>
+                  </>
+                )}
               </div>
 
               <div className="text-xs text-gray-500 space-y-1">
-                <p>• Your payment information is securely stored by Stripe</p>
-                <p>• You can update or remove your card at any time</p>
-                <p>• All transactions are encrypted and PCI compliant</p>
+                <p>• Payment details are handled by the secure checkout provider</p>
+                <p>• You can update or remove your card after subscribing</p>
+                <p>• All payment transactions are encrypted and PCI compliant</p>
               </div>
             </CardContent>
           </Card>
