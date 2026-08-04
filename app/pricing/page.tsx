@@ -1,39 +1,34 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { CancelItLogo } from "@/components/brand/cancelit-logo"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Check } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Reveal } from "@/components/marketing/reveal"
+import { SiteNav } from "@/components/marketing/site-nav"
+import { SiteFooter } from "@/components/marketing/site-footer"
+import { Check, Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
 const plans = [
   {
     name: "Free",
     price: "$0",
-    period: "/month",
-    description: "For trying CancelIt before paying",
+    description: "For trying CancelIt before paying.",
     features: ["Track up to 5 subscriptions", "Plaid scan returns up to 5 matches", "Basic dashboard access"],
     priceId: undefined,
-    popular: false,
     free: true,
   },
   {
     name: "Starter",
     price: "$4.99",
-    period: "/month",
-    description: "For a short personal list and light cleanup",
+    description: "For a short personal list and light cleanup.",
     features: ["Track up to 10 subscriptions", "Plaid scan returns up to 10 matches", "Basic spending view", "Renewal reminders"],
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_MINIMUM,
-    popular: false,
   },
   {
     name: "Plus",
     price: "$12.99",
-    period: "/month",
-    description: "Best for a full scan, cancellation guidance, and savings help",
+    description: "Best for a full scan, cancellation guidance, and savings help.",
     features: [
       "Track up to 50 subscriptions",
       "Plaid scan returns up to 50 matches",
@@ -48,8 +43,7 @@ const plans = [
   {
     name: "Unlimited",
     price: "$19.99",
-    period: "/month",
-    description: "For heavy cleanup and ongoing subscription control",
+    description: "For heavy cleanup and ongoing subscription control.",
     features: [
       "Unlimited subscription tracking",
       "Unlimited Plaid-detected matches",
@@ -60,7 +54,25 @@ const plans = [
       "Team-ready exports",
     ],
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_MAXIMUM,
-    popular: false,
+  },
+]
+
+const faqs = [
+  {
+    question: "Can I change plans later?",
+    answer: "Yes. You can upgrade or downgrade at any time. Changes take effect at the start of your next billing cycle.",
+  },
+  {
+    question: "What payment methods do you accept?",
+    answer: "We accept all major credit cards, including Visa, Mastercard, and American Express.",
+  },
+  {
+    question: "Is there a free trial?",
+    answer: "Yes. All paid plans come with a 14-day free trial. No credit card required to start.",
+  },
+  {
+    question: "Can I cancel anytime?",
+    answer: "Absolutely. Cancel whenever you want, with no fees. Access continues until the end of your billing period.",
   },
 ]
 
@@ -78,21 +90,15 @@ export default function PricingPage() {
     try {
       setLoadingPlan(planName)
 
-      // Check if user is authenticated
       const {
         data: { user },
       } = await supabase.auth.getUser()
 
       if (!user) {
-        // Redirect to signup with return URL
         router.push(`/signup?returnTo=/pricing`)
         return
       }
 
-      console.log("Creating checkout session for:", planName)
-      console.log("Price ID:", priceId)
-
-      // Create checkout session
       const response = await fetch("/api/create-checkout-session", {
         method: "POST",
         headers: {
@@ -102,14 +108,12 @@ export default function PricingPage() {
       })
 
       const data = await response.json()
-      console.log("Checkout session response:", data)
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to create checkout session")
       }
 
       if (data.url) {
-        // Redirect to Stripe Checkout
         window.location.href = data.url
       } else {
         throw new Error("No checkout URL returned")
@@ -123,100 +127,86 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <CancelItLogo
-            href="/"
-            className="mb-6 justify-center"
-            imageClassName="h-12 w-12 rounded-xl"
-            textClassName="text-2xl text-gray-900"
-          />
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Choose Your Plan</h1>
-          <p className="text-xl text-gray-600">
-            Plaid can detect recurring charges, but each plan controls how many matches you can manage.
-          </p>
-        </div>
+    <main className="relative min-h-screen overflow-hidden bg-black text-white">
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-black">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(82,38,255,0.2),transparent_32%),linear-gradient(to_bottom,rgba(0,0,0,0.08),#000_60%)]" />
+      </div>
 
-        {/* Pricing Cards */}
-        <div className="grid md:grid-cols-4 gap-6 mb-12">
+      <SiteNav />
+
+      <section className="relative z-10 mx-auto max-w-7xl px-4 pb-8 pt-16 text-center sm:px-6 lg:pt-20">
+        <h1 className="text-5xl font-black tracking-tight sm:text-6xl">Simple pricing, real savings.</h1>
+        <p className="mx-auto mt-4 max-w-xl text-pretty text-lg leading-8 text-white/58">
+          Plaid detects your recurring charges. Your plan controls how many of them you can track and act on.
+        </p>
+      </section>
+
+      <Reveal className="relative z-10 mx-auto max-w-7xl px-4 pb-20 sm:px-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {plans.map((plan) => (
-            <Card
+            <article
               key={plan.name}
-              className={`relative ${
-                plan.popular ? "border-2 border-red-500 shadow-lg shadow-red-500/10" : "border border-gray-200"
+              className={`relative flex flex-col rounded-2xl p-6 ${
+                plan.popular ? "bg-red-500 text-white" : "border border-white/[0.08] bg-[#101010]"
               }`}
             >
               {plan.popular && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <Badge className="bg-red-500 text-white px-4 py-1">Most Popular</Badge>
-                </div>
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-red-600">
+                  Most popular
+                </span>
               )}
-              <CardHeader>
-                <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                <CardDescription>{plan.description}</CardDescription>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold">{plan.price}</span>
-                  <span className="text-gray-600">{plan.period}</span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start">
-                      <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-700">{feature}</span>
+              <div className="flex-1">
+                <h2 className="text-xl font-semibold">{plan.name}</h2>
+                <p className={`mt-2 text-sm leading-6 ${plan.popular ? "text-white/78" : "text-white/50"}`}>
+                  {plan.description}
+                </p>
+                <p className="mt-6 text-4xl font-black tabular-nums">
+                  {plan.price}
+                  <span className="text-sm font-medium opacity-70">/mo</span>
+                </p>
+                <ul className="mt-6 space-y-3">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2 text-sm">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
-              </CardContent>
-              <CardFooter>
-                <Button
-                  className={`w-full ${plan.popular ? "bg-red-500 hover:bg-red-600" : ""}`}
-                  onClick={() => (plan.free ? router.push("/signup") : handleSubscribe(plan.priceId, plan.name))}
-                  disabled={loadingPlan !== null}
-                >
-                  {loadingPlan === plan.name ? "Loading..." : plan.free ? "Start Free" : "Get Started"}
-                </Button>
-              </CardFooter>
-            </Card>
+              </div>
+              <Button
+                className={`mt-8 w-full ${
+                  plan.popular ? "bg-white text-red-600 hover:bg-white/90" : "bg-white/[0.06] text-white hover:bg-white/[0.1]"
+                }`}
+                disabled={loadingPlan !== null}
+                onClick={() => (plan.free ? router.push("/signup") : handleSubscribe(plan.priceId, plan.name))}
+              >
+                {loadingPlan === plan.name ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading
+                  </span>
+                ) : (
+                  `Choose ${plan.name}`
+                )}
+              </Button>
+            </article>
           ))}
         </div>
+      </Reveal>
 
-        {/* FAQ Section */}
-        <div className="max-w-3xl mx-auto mt-16">
-          <h2 className="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Can I change plans later?</h3>
-              <p className="text-gray-600">
-                Yes! You can upgrade or downgrade your plan at any time. Changes take effect at the start of your next
-                billing cycle.
-              </p>
+      <Reveal delay={0.1} className="relative z-10 mx-auto max-w-3xl px-4 pb-24 sm:px-6">
+        <h2 className="text-center text-3xl font-black tracking-tight">Frequently asked questions</h2>
+        <div className="mt-10 divide-y divide-white/[0.08] rounded-2xl border border-white/[0.08] bg-[#101010]">
+          {faqs.map((faq) => (
+            <div key={faq.question} className="p-6">
+              <h3 className="text-base font-semibold">{faq.question}</h3>
+              <p className="mt-2 text-sm leading-6 text-white/54">{faq.answer}</p>
             </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-2">What payment methods do you accept?</h3>
-              <p className="text-gray-600">
-                We accept all major credit cards including Visa, Mastercard, and American Express.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Is there a free trial?</h3>
-              <p className="text-gray-600">
-                Yes! All plans come with a 14-day free trial. No credit card required to start your trial.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Can I cancel anytime?</h3>
-              <p className="text-gray-600">
-                Absolutely. You can cancel your subscription at any time with no cancellation fees. Your access
-                continues until the end of your billing period.
-              </p>
-            </div>
-          </div>
+          ))}
         </div>
-      </div>
-    </div>
+      </Reveal>
+
+      <SiteFooter />
+    </main>
   )
 }

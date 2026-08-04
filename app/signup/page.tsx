@@ -174,8 +174,9 @@ export default function SignUpPage() {
 
   if (showSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black p-4">
-        <Card className="w-full max-w-md border-white/[0.08] bg-[#0F0F0F] shadow-2xl shadow-black/60">
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black p-4">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(82,38,255,0.22),transparent_32%)]" />
+        <Card className="relative w-full max-w-md animate-in fade-in-0 zoom-in-95 border-white/[0.08] bg-[#0F0F0F] shadow-2xl shadow-black/60 duration-500">
           <CardHeader className="text-center space-y-4">
             <CancelItLogo
               href=""
@@ -211,8 +212,9 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black p-4">
-      <div className="w-full max-w-md">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black p-4">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(82,38,255,0.22),transparent_32%)]" />
+      <div className="relative w-full max-w-md animate-in fade-in-0 zoom-in-95 duration-500">
         <Link
           href="/"
           className="inline-flex items-center text-sm text-white/50 hover:text-white/80 mb-6 transition-colors"
@@ -251,7 +253,7 @@ export default function SignUpPage() {
                   <Input
                     id="fullName"
                     type="text"
-                    placeholder="John Doe"
+                    placeholder="Priya Patel"
                     value={fullName}
                     onChange={(e) => {
                       setFullName(e.target.value)
