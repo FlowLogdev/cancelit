@@ -2,16 +2,15 @@ import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
 
+const planLabels: Record<string, string> = {
+  free: "Free",
+  minimum: "Starter",
+  medium: "Plus",
+  maximum: "Unlimited",
+}
+
 export async function GET() {
   try {
-    if (!process.env.STRIPE_SECRET_KEY) {
-      return NextResponse.json({ error: "Stripe is not configured" }, { status: 500 })
-    }
-
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: "2024-12-18.acacia",
-    })
-
     const supabase = await createClient()
 
     const {
@@ -28,7 +27,7 @@ export async function GET() {
       .from("customers")
       .select("stripe_customer_id, stripe_subscription_id, subscription_tier, subscription_status")
       .eq("user_id", user.id)
-      .single()
+      .maybeSingle()
 
     if (customerError) {
       console.error("Error fetching customer:", customerError)
@@ -36,32 +35,56 @@ export async function GET() {
     }
 
     // If no subscription, return null
-    if (!customer.stripe_subscription_id) {
+    if (!customer?.stripe_subscription_id) {
       return NextResponse.json({
         subscription: null,
       })
     }
 
+    if (!process.env.STRIPE_SECRET_KEY) {
+      const tier = customer.subscription_tier || "free"
+
+      return NextResponse.json({
+        subscription: {
+          status: customer.subscription_status || "active",
+          tier,
+          plan: planLabels[tier] || tier,
+          billingPortalAvailable: false,
+        },
+      })
+    }
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2024-12-18.acacia",
+    })
+
     // Get subscription details from Stripe
     try {
       const subscription = await stripe.subscriptions.retrieve(customer.stripe_subscription_id)
+      const tier = customer.subscription_tier || "free"
 
       return NextResponse.json({
         subscription: {
           id: subscription.id,
           status: subscription.status,
-          tier: customer.subscription_tier || "free",
+          tier,
+          plan: planLabels[tier] || tier,
           current_period_end: subscription.current_period_end,
           cancel_at_period_end: subscription.cancel_at_period_end,
+          billingPortalAvailable: true,
         },
       })
     } catch (stripeError) {
       console.error("Error fetching subscription from Stripe:", stripeError)
+      const tier = customer.subscription_tier || "free"
+
       // Return database info if Stripe fails
       return NextResponse.json({
         subscription: {
-          tier: customer.subscription_tier || "free",
+          tier,
+          plan: planLabels[tier] || tier,
           status: customer.subscription_status || "inactive",
+          billingPortalAvailable: false,
         },
       })
     }
