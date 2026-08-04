@@ -79,13 +79,12 @@ export function SignupActivityToast() {
           </div>
 
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-red-300" aria-hidden="true" />
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-200/85">Sample activity</p>
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-red-300" aria-hidden="true" />
+              <p className="text-sm font-semibold leading-5">
+                CancelIt congratulates {activity.name} for signing up for our service.
+              </p>
             </div>
-            <p className="mt-1.5 text-sm font-semibold leading-5">
-              CancelIt congratulates {activity.name} for signing up for our service.
-            </p>
             <p className="mt-1 text-xs leading-5 text-white/55">
               Example signup preview from {activity.city}. New sample appears every minute.
             </p>
