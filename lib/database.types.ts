@@ -153,6 +153,70 @@ export interface Database {
           updated_at?: string
         }
       }
+      support_ticket_counters: {
+        Row: {
+          ticket_year: number
+          last_sequence: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          ticket_year: number
+          last_sequence?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          ticket_year?: number
+          last_sequence?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      support_tickets: {
+        Row: {
+          id: string
+          ticket_number: string
+          ticket_year: number
+          ticket_sequence: number
+          customer_name: string
+          customer_email: string
+          issue_type: string
+          message: string
+          status: string
+          user_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          ticket_number: string
+          ticket_year: number
+          ticket_sequence: number
+          customer_name: string
+          customer_email: string
+          issue_type: string
+          message: string
+          status?: string
+          user_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          ticket_number?: string
+          ticket_year?: number
+          ticket_sequence?: number
+          customer_name?: string
+          customer_email?: string
+          issue_type?: string
+          message?: string
+          status?: string
+          user_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       plaid_items: {
         Row: {
           id: string
@@ -310,7 +374,29 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_support_ticket: {
+        Args: {
+          p_customer_name: string
+          p_customer_email: string
+          p_issue_type: string
+          p_message: string
+          p_user_id?: string | null
+        }
+        Returns: {
+          id: string
+          ticket_number: string
+          ticket_year: number
+          ticket_sequence: number
+          customer_name: string
+          customer_email: string
+          issue_type: string
+          message: string
+          status: string
+          user_id: string | null
+          created_at: string
+          updated_at: string
+        }
+      }
     }
     Enums: {
       [_ in never]: never
