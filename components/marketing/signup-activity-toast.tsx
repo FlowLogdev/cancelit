@@ -4,16 +4,16 @@ import { useEffect, useState } from "react"
 import { CheckCircle2 } from "lucide-react"
 
 const SIGNUP_ACTIVITY = [
-  { name: "Sofia Martins", city: "Miami" },
-  { name: "Daniel Brooks", city: "Austin" },
-  { name: "Isabella Costa", city: "Orlando" },
-  { name: "Marcus Bennett", city: "Atlanta" },
-  { name: "Camila Reyes", city: "Tampa" },
-  { name: "Ethan Walker", city: "Denver" },
-  { name: "Natalie Hughes", city: "Charlotte" },
-  { name: "Lucas Pereira", city: "Boston" },
-  { name: "Ava Thompson", city: "Phoenix" },
-  { name: "Noah Campbell", city: "Seattle" },
+  { name: "Sofia", city: "Miami" },
+  { name: "Daniel", city: "Austin" },
+  { name: "Isabella", city: "Orlando" },
+  { name: "Marcus", city: "Atlanta" },
+  { name: "Camila", city: "Tampa" },
+  { name: "Ethan", city: "Denver" },
+  { name: "Natalie", city: "Charlotte" },
+  { name: "Lucas", city: "Boston" },
+  { name: "Ava", city: "Phoenix" },
+  { name: "Noah", city: "Seattle" },
 ]
 
 function getNextIndex(currentIndex: number) {
