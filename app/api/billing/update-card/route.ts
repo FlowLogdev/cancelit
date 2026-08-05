@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server"
+import { getSiteUrl, getStripeSecretKey, isValidStripeSecretKey } from "@/lib/stripe/config"
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
 
 export async function POST() {
   try {
-    if (!process.env.STRIPE_SECRET_KEY) {
+    const stripeSecretKey = getStripeSecretKey()
+
+    if (!isValidStripeSecretKey(stripeSecretKey)) {
       return NextResponse.json(
         {
           error:
@@ -14,7 +17,7 @@ export async function POST() {
       )
     }
 
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    const stripe = new Stripe(stripeSecretKey, {
       apiVersion: "2024-12-18.acacia",
     })
 
@@ -43,7 +46,7 @@ export async function POST() {
     // Create a billing portal session
     const session = await stripe.billingPortal.sessions.create({
       customer: customer.stripe_customer_id,
-      return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/settings`,
+      return_url: `${getSiteUrl()}/settings`,
     })
 
     return NextResponse.json({
