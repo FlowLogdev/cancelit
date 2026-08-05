@@ -86,7 +86,7 @@ export function SignupActivityToast() {
               </p>
             </div>
             <p className="mt-1 text-xs leading-5 text-white/55">
-              Example signup preview from {activity.city}. New sample appears every minute.
+              New signup every minute from {activity.city}.
             </p>
           </div>
         </div>
