@@ -13,6 +13,12 @@ const planPriceEnvKeys: Record<StripePlanTier, string[]> = {
   maximum: ["STRIPE_PRICE_MAXIMUM", "NEXT_PUBLIC_STRIPE_PRICE_MAXIMUM"],
 }
 
+const planPriceDefaults: Record<StripePlanTier, string> = {
+  minimum: "price_1TmQ5hHnnXzltziloT7UhPtI",
+  medium: "price_1U0wS3HnnXzltzil4IdgOm8X",
+  maximum: "price_1TmQ6ZHnnXzltzileGjyuSoj",
+}
+
 const planNames: Record<StripePlanTier, string> = {
   minimum: "Starter",
   medium: "Plus",
@@ -61,12 +67,12 @@ export function getStripePriceId(tier: StripePlanTier) {
   for (const key of planPriceEnvKeys[tier]) {
     const value = readEnvValue(key)
 
-    if (value) {
+    if (value.startsWith("price_")) {
       return value
     }
   }
 
-  return ""
+  return planPriceDefaults[tier]
 }
 
 export function getConfiguredStripePlans(): StripePlanConfig[] {
