@@ -2,44 +2,71 @@ import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
 import { createClient } from "@/lib/supabase/route-client"
 
-const configuredPlans = [
+type PlanTier = "minimum" | "medium" | "maximum"
+
+const configuredPlans: Array<{ tier: PlanTier; name: string; priceId: string }> = [
   {
     tier: "minimum",
     name: "Starter",
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_MINIMUM,
+    priceId: readEnvValue("STRIPE_PRICE_MINIMUM") || readEnvValue("NEXT_PUBLIC_STRIPE_PRICE_MINIMUM"),
   },
   {
     tier: "medium",
     name: "Plus",
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_MEDIUM,
+    priceId: readEnvValue("STRIPE_PRICE_MEDIUM") || readEnvValue("NEXT_PUBLIC_STRIPE_PRICE_MEDIUM"),
   },
   {
     tier: "maximum",
     name: "Unlimited",
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_MAXIMUM,
+    priceId: readEnvValue("STRIPE_PRICE_MAXIMUM") || readEnvValue("NEXT_PUBLIC_STRIPE_PRICE_MAXIMUM"),
   },
 ]
 
+function readEnvValue(key: string) {
+  const rawValue = process.env[key]
+
+  if (!rawValue) {
+    return ""
+  }
+
+  let value = rawValue.trim()
+
+  if (value.startsWith(`${key}=`)) {
+    value = value.slice(key.length + 1).trim()
+  }
+
+  return value.replace(/^['"]|['"]$/g, "").trim()
+}
+
+function getStripeSecretKey() {
+  return readEnvValue("STRIPE_SECRET_KEY")
+}
+
+function getSiteUrl() {
+  return readEnvValue("NEXT_PUBLIC_SITE_URL") || "https://cancelit.app"
+}
+
+function isPlanTier(value: unknown): value is PlanTier {
+  return value === "minimum" || value === "medium" || value === "maximum"
+}
+
 export async function POST(request: NextRequest) {
   try {
-    if (!process.env.STRIPE_SECRET_KEY?.startsWith("sk_")) {
+    const stripeSecretKey = getStripeSecretKey()
+
+    if (!stripeSecretKey.startsWith("sk_")) {
       return NextResponse.json({ error: "Stripe configuration error. Please contact support." }, { status: 500 })
     }
 
-    if (!process.env.NEXT_PUBLIC_SITE_URL) {
-      return NextResponse.json({ error: "Site URL configuration error. Please contact support." }, { status: 500 })
-    }
+    const siteUrl = getSiteUrl()
+    const { priceId, tier } = await request.json()
 
-    const { priceId } = await request.json()
+    const plan = isPlanTier(tier)
+      ? configuredPlans.find((candidate) => candidate.tier === tier)
+      : configuredPlans.find((candidate) => candidate.priceId === priceId)
 
-    if (!priceId) {
-      return NextResponse.json({ error: "Price ID is required" }, { status: 400 })
-    }
-
-    const plan = configuredPlans.find((candidate) => candidate.priceId === priceId)
-
-    if (!plan) {
-      return NextResponse.json({ error: "This Stripe price is not configured for a CancelIt plan." }, { status: 400 })
+    if (!plan?.priceId) {
+      return NextResponse.json({ error: "This Stripe plan is not configured yet. Please contact support." }, { status: 500 })
     }
 
     const supabase = await createClient()
@@ -52,11 +79,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Please sign in to continue" }, { status: 401 })
     }
 
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    const stripe = new Stripe(stripeSecretKey, {
       apiVersion: "2024-12-18.acacia",
     })
 
-    await stripe.prices.retrieve(priceId)
+    await stripe.prices.retrieve(plan.priceId)
 
     const metadata = {
       userId: user.id,
@@ -69,12 +96,12 @@ export async function POST(request: NextRequest) {
       payment_method_types: ["card"],
       line_items: [
         {
-          price: priceId,
+          price: plan.priceId,
           quantity: 1,
         },
       ],
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/pricing`,
+      success_url: `${siteUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrl}/pricing`,
       customer_email: user.email,
       client_reference_id: user.id,
       metadata,
