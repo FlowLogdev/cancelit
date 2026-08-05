@@ -6,6 +6,12 @@ const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 const ANTHROPIC_VERSION = "2023-06-01"
 const DEFAULT_MODEL = "claude-3-5-haiku-20241022"
 const MAX_MESSAGE_LENGTH = 700
+const FREE_MESSAGE_LIMIT = 10
+const FREE_MESSAGE_COOKIE = "cancelit_bot_free_messages"
+const FREE_MESSAGE_COOKIE_MAX_AGE = 60 * 60 * 24 * 30
+const UPGRADE_URL = "/pricing"
+const UPGRADE_REPLY =
+  "You've used the 10 free CancelIt Bot messages. To keep getting personalized savings and cancellation help, choose a CancelIt subscription at /pricing."
 
 type ChatRole = "user" | "assistant"
 
@@ -165,6 +171,56 @@ function toAnthropicMessages(history: ChatMessage[], message: string) {
   ]
 }
 
+function getCookieValue(cookieHeader: string | null, name: string) {
+  if (!cookieHeader) {
+    return null
+  }
+
+  const cookie = cookieHeader
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`))
+
+  return cookie ? decodeURIComponent(cookie.slice(name.length + 1)) : null
+}
+
+function getFreeMessageCount(request: Request) {
+  const rawValue = getCookieValue(request.headers.get("cookie"), FREE_MESSAGE_COOKIE)
+  const parsedValue = Number.parseInt(rawValue || "0", 10)
+
+  if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+    return 0
+  }
+
+  return Math.min(parsedValue, FREE_MESSAGE_LIMIT)
+}
+
+function createBotResponse(payload: Record<string, unknown>, usedMessages: number, status = 200) {
+  const safeUsedMessages = Math.min(Math.max(usedMessages, 0), FREE_MESSAGE_LIMIT)
+  const response = NextResponse.json(
+    {
+      ...payload,
+      upgradeUrl: payload.upgradeUrl || UPGRADE_URL,
+      usage: {
+        used: safeUsedMessages,
+        limit: FREE_MESSAGE_LIMIT,
+        remaining: Math.max(FREE_MESSAGE_LIMIT - safeUsedMessages, 0),
+      },
+    },
+    { status },
+  )
+
+  response.cookies.set(FREE_MESSAGE_COOKIE, String(safeUsedMessages), {
+    httpOnly: true,
+    maxAge: FREE_MESSAGE_COOKIE_MAX_AGE,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  })
+
+  return response
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()
@@ -175,10 +231,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 })
     }
 
+    const usedMessages = getFreeMessageCount(request)
+
+    if (usedMessages >= FREE_MESSAGE_LIMIT) {
+      return createBotResponse(
+        {
+          error: "Free message limit reached",
+          limitReached: true,
+          reply: UPGRADE_REPLY,
+          source: "quota",
+          upgradeUrl: UPGRADE_URL,
+        },
+        usedMessages,
+        402,
+      )
+    }
+
+    const nextUsedMessages = usedMessages + 1
     const apiKey = process.env.ANTHROPIC_API_KEY
 
     if (!apiKey) {
-      return NextResponse.json({ reply: buildFallbackReply(message), source: "fallback" })
+      return createBotResponse({ reply: buildFallbackReply(message), source: "fallback" }, nextUsedMessages)
     }
 
     const anthropicResponse = await fetch(ANTHROPIC_API_URL, {
@@ -199,7 +272,7 @@ export async function POST(request: Request) {
 
     if (!anthropicResponse.ok) {
       console.error("Claude bot error:", await anthropicResponse.text())
-      return NextResponse.json({ reply: buildFallbackReply(message), source: "fallback" })
+      return createBotResponse({ reply: buildFallbackReply(message), source: "fallback" }, nextUsedMessages)
     }
 
     const data = await anthropicResponse.json()
@@ -211,7 +284,7 @@ export async function POST(request: Request) {
           .join("\n")
       : ""
 
-    return NextResponse.json({ reply: reply || buildFallbackReply(message), source: reply ? "claude" : "fallback" })
+    return createBotResponse({ reply: reply || buildFallbackReply(message), source: reply ? "claude" : "fallback" }, nextUsedMessages)
   } catch (error) {
     console.error("CancelIt bot error:", error)
     return NextResponse.json({ error: "CancelIt Bot is temporarily unavailable" }, { status: 500 })
