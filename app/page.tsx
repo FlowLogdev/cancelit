@@ -2,10 +2,8 @@ import { Button } from "@/components/ui/button"
 import { CancelItLogo } from "@/components/brand/cancelit-logo"
 import { Reveal } from "@/components/marketing/reveal"
 import { CancelItBotWidget } from "@/components/marketing/cancelit-bot-widget"
-import { SignupActivityToast } from "@/components/marketing/signup-activity-toast"
 import { SiteNav } from "@/components/marketing/site-nav"
 import { SiteFooter } from "@/components/marketing/site-footer"
-import Threads from "@/components/threads"
 import {
   ArrowRight,
   BadgeDollarSign,
@@ -113,17 +111,10 @@ const plans = [
 export default function Home() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-black text-white">
-      <SignupActivityToast />
       <CancelItBotWidget />
 
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-black">
-        <div
-          className="absolute left-1/2 top-[-12rem] -translate-x-1/2 opacity-80"
-          style={{ width: "1080px", height: "1080px", position: "relative" }}
-        >
-          <Threads color={[0.32, 0.15, 1]} amplitude={1} distance={0} enableMouseInteraction />
-        </div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(82,38,255,0.24),transparent_30%),linear-gradient(to_bottom,rgba(0,0,0,0.08),#000_78%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(239,68,68,0.14),transparent_38%),linear-gradient(to_bottom,rgba(0,0,0,0.08),#000_70%)]" />
       </div>
 
       <SiteNav />

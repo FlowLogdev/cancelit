@@ -57,7 +57,7 @@ function appendUpgradeMessage(messages: BotMessage[]) {
 }
 
 export function CancelItBotWidget() {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<BotMessage[]>(initialMessages)
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)

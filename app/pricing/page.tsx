@@ -134,7 +134,7 @@ export default function PricingPage() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-black text-white">
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-black">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(82,38,255,0.2),transparent_32%),linear-gradient(to_bottom,rgba(0,0,0,0.08),#000_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(239,68,68,0.14),transparent_32%),linear-gradient(to_bottom,rgba(0,0,0,0.08),#000_60%)]" />
       </div>
 
       <SiteNav />

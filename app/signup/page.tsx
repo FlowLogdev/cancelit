@@ -175,7 +175,7 @@ export default function SignUpPage() {
   if (showSuccess) {
     return (
       <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black p-4">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(82,38,255,0.22),transparent_32%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(239,68,68,0.14),transparent_32%)]" />
         <Card className="relative w-full max-w-md animate-in fade-in-0 zoom-in-95 border-white/[0.08] bg-[#0F0F0F] shadow-2xl shadow-black/60 duration-500">
           <CardHeader className="text-center space-y-4">
             <CancelItLogo
@@ -213,7 +213,7 @@ export default function SignUpPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black p-4">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(82,38,255,0.22),transparent_32%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(239,68,68,0.14),transparent_32%)]" />
       <div className="relative w-full max-w-md animate-in fade-in-0 zoom-in-95 duration-500">
         <Link
           href="/"
