@@ -10,6 +10,12 @@ interface BotMessage {
   content: string
 }
 
+const FREE_MESSAGE_LIMIT = 10
+const FREE_MESSAGE_STORAGE_KEY = "cancelit_bot_free_messages"
+const UPGRADE_URL = "/pricing"
+const UPGRADE_MESSAGE =
+  "You've used the 10 free CancelIt Bot messages. To keep getting personalized savings and cancellation help, choose a CancelIt subscription."
+
 const initialMessages: BotMessage[] = [
   {
     role: "assistant",
@@ -20,16 +26,69 @@ const initialMessages: BotMessage[] = [
 
 const quickPrompts = ["How do I cancel Netflix?", "Where can I save this month?", "Help me cancel Adobe"]
 
+function getStoredMessageCount() {
+  if (typeof window === "undefined") {
+    return 0
+  }
+
+  const parsedValue = Number.parseInt(window.localStorage.getItem(FREE_MESSAGE_STORAGE_KEY) || "0", 10)
+
+  if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+    return 0
+  }
+
+  return Math.min(parsedValue, FREE_MESSAGE_LIMIT)
+}
+
+function persistMessageCount(count: number) {
+  if (typeof window === "undefined") {
+    return
+  }
+
+  window.localStorage.setItem(FREE_MESSAGE_STORAGE_KEY, String(Math.min(Math.max(count, 0), FREE_MESSAGE_LIMIT)))
+}
+
+function appendUpgradeMessage(messages: BotMessage[]) {
+  if (messages.some((message) => message.role === "assistant" && message.content === UPGRADE_MESSAGE)) {
+    return messages
+  }
+
+  return [...messages, { role: "assistant" as const, content: UPGRADE_MESSAGE }]
+}
+
 export function CancelItBotWidget() {
   const [open, setOpen] = useState(true)
   const [messages, setMessages] = useState<BotMessage[]>(initialMessages)
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
+  const [sentCount, setSentCount] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  const freeLimitReached = sentCount >= FREE_MESSAGE_LIMIT
+  const remainingMessages = Math.max(FREE_MESSAGE_LIMIT - sentCount, 0)
+
+  useEffect(() => {
+    const storedCount = getStoredMessageCount()
+    setSentCount(storedCount)
+
+    if (storedCount >= FREE_MESSAGE_LIMIT) {
+      setMessages((currentMessages) => appendUpgradeMessage(currentMessages))
+    }
+  }, [])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })
   }, [messages, loading, open])
+
+  const syncUsage = (usage: unknown, fallbackCount: number) => {
+    const used = typeof usage === "object" && usage && "used" in usage ? Number((usage as { used: unknown }).used) : fallbackCount
+    const safeUsed = Number.isFinite(used) ? Math.min(Math.max(used, 0), FREE_MESSAGE_LIMIT) : fallbackCount
+
+    setSentCount(safeUsed)
+    persistMessageCount(safeUsed)
+
+    return safeUsed
+  }
 
   const sendMessage = async (message: string) => {
     const trimmed = message.trim()
@@ -39,9 +98,19 @@ export function CancelItBotWidget() {
     }
 
     const nextMessages: BotMessage[] = [...messages, { role: "user", content: trimmed }]
-    setMessages(nextMessages)
     setInput("")
+
+    if (sentCount >= FREE_MESSAGE_LIMIT) {
+      setMessages(appendUpgradeMessage(nextMessages))
+      return
+    }
+
+    setMessages(nextMessages)
     setLoading(true)
+
+    const optimisticCount = Math.min(sentCount + 1, FREE_MESSAGE_LIMIT)
+    setSentCount(optimisticCount)
+    persistMessageCount(optimisticCount)
 
     try {
       const response = await fetch("/api/cancelit-bot", {
@@ -54,12 +123,21 @@ export function CancelItBotWidget() {
       })
 
       const data = await response.json()
+      const usedCount = syncUsage(data?.usage, optimisticCount)
+
+      if (data?.limitReached) {
+        setMessages(appendUpgradeMessage([...nextMessages, { role: "assistant", content: data.reply || UPGRADE_MESSAGE }]))
+        return
+      }
 
       if (!response.ok) {
         throw new Error(data?.error || "CancelIt Bot is unavailable")
       }
 
-      setMessages([...nextMessages, { role: "assistant", content: data.reply || "I can help with cancellation paths and savings ideas." }])
+      const reply = data.reply || "I can help with cancellation paths and savings ideas."
+      const responseMessages: BotMessage[] = [...nextMessages, { role: "assistant", content: reply }]
+
+      setMessages(usedCount >= FREE_MESSAGE_LIMIT ? appendUpgradeMessage(responseMessages) : responseMessages)
     } catch (error) {
       setMessages([
         ...nextMessages,
@@ -142,13 +220,33 @@ export function CancelItBotWidget() {
       </div>
 
       <div className="border-t border-white/10 px-4 py-3">
+        <div className="mb-3 flex items-center justify-between gap-3 text-[11px] leading-4 text-white/42">
+          <span>
+            {freeLimitReached
+              ? "Free message limit reached"
+              : `${remainingMessages} free message${remainingMessages === 1 ? "" : "s"} left`}
+          </span>
+          <a href={UPGRADE_URL} className="font-semibold text-red-300 transition hover:text-red-200">
+            Subscription plans
+          </a>
+        </div>
+
+        {freeLimitReached && (
+          <a
+            href={UPGRADE_URL}
+            className="mb-3 flex w-full items-center justify-center rounded-xl bg-red-500 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-red-600"
+          >
+            Buy a subscription to keep chatting
+          </a>
+        )}
+
         <div className="mb-3 flex flex-wrap gap-2">
           {quickPrompts.map((prompt) => (
             <button
               key={prompt}
               type="button"
               onClick={() => void sendMessage(prompt)}
-              disabled={loading}
+              disabled={loading || freeLimitReached}
               className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-white/62 transition hover:border-red-300/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               {prompt}
@@ -164,10 +262,11 @@ export function CancelItBotWidget() {
             id="cancelit-bot-message"
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            placeholder="Ask how to cancel or save..."
+            placeholder={freeLimitReached ? "Subscribe to keep chatting..." : "Ask how to cancel or save..."}
             rows={1}
             maxLength={700}
-            className="max-h-28 min-h-11 flex-1 resize-none rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2.5 text-sm leading-6 text-white outline-none transition placeholder:text-white/32 focus:border-red-300/50"
+            disabled={freeLimitReached}
+            className="max-h-28 min-h-11 flex-1 resize-none rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2.5 text-sm leading-6 text-white outline-none transition placeholder:text-white/32 focus:border-red-300/50 disabled:cursor-not-allowed disabled:opacity-55"
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault()
@@ -177,7 +276,7 @@ export function CancelItBotWidget() {
           />
           <Button
             type="submit"
-            disabled={loading || !input.trim()}
+            disabled={loading || freeLimitReached || !input.trim()}
             size="icon"
             className="h-11 w-11 shrink-0 rounded-xl bg-red-500 text-white hover:bg-red-600 disabled:opacity-50"
             aria-label="Send message"
