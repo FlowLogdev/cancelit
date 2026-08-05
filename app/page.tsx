@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { CancelItLogo } from "@/components/brand/cancelit-logo"
 import { Reveal } from "@/components/marketing/reveal"
+import { CancelItBotWidget } from "@/components/marketing/cancelit-bot-widget"
 import { SignupActivityToast } from "@/components/marketing/signup-activity-toast"
 import { SiteNav } from "@/components/marketing/site-nav"
 import { SiteFooter } from "@/components/marketing/site-footer"
@@ -113,6 +114,7 @@ export default function Home() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-black text-white">
       <SignupActivityToast />
+      <CancelItBotWidget />
 
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-black">
         <div
