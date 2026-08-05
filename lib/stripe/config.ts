@@ -4,6 +4,7 @@ export type StripePlanConfig = {
   tier: StripePlanTier
   name: string
   priceId: string
+  unitAmount: number
 }
 
 const planPriceEnvKeys: Record<StripePlanTier, string[]> = {
@@ -16,6 +17,12 @@ const planNames: Record<StripePlanTier, string> = {
   minimum: "Starter",
   medium: "Plus",
   maximum: "Unlimited",
+}
+
+const planUnitAmounts: Record<StripePlanTier, number> = {
+  minimum: 499,
+  medium: 1299,
+  maximum: 1999,
 }
 
 export function readEnvValue(key: string) {
@@ -31,7 +38,7 @@ export function readEnvValue(key: string) {
     value = value.slice(key.length + 1).trim()
   }
 
-  return value.replace(/^['"]|['"]$/g, "").trim()
+  return value.replace(/^[\'"]|[\'"]$/g, "").trim()
 }
 
 export function getStripeSecretKey() {
@@ -67,6 +74,7 @@ export function getConfiguredStripePlans(): StripePlanConfig[] {
     tier,
     name: planNames[tier],
     priceId: getStripePriceId(tier),
+    unitAmount: planUnitAmounts[tier],
   }))
 }
 
