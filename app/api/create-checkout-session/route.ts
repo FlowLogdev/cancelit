@@ -1,69 +1,27 @@
 import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
 import { createClient } from "@/lib/supabase/route-client"
-
-type PlanTier = "minimum" | "medium" | "maximum"
-
-const configuredPlans: Array<{ tier: PlanTier; name: string; priceId: string }> = [
-  {
-    tier: "minimum",
-    name: "Starter",
-    priceId: readEnvValue("STRIPE_PRICE_MINIMUM") || readEnvValue("NEXT_PUBLIC_STRIPE_PRICE_MINIMUM"),
-  },
-  {
-    tier: "medium",
-    name: "Plus",
-    priceId: readEnvValue("STRIPE_PRICE_MEDIUM") || readEnvValue("NEXT_PUBLIC_STRIPE_PRICE_MEDIUM"),
-  },
-  {
-    tier: "maximum",
-    name: "Unlimited",
-    priceId: readEnvValue("STRIPE_PRICE_MAXIMUM") || readEnvValue("NEXT_PUBLIC_STRIPE_PRICE_MAXIMUM"),
-  },
-]
-
-function readEnvValue(key: string) {
-  const rawValue = process.env[key]
-
-  if (!rawValue) {
-    return ""
-  }
-
-  let value = rawValue.trim()
-
-  if (value.startsWith(`${key}=`)) {
-    value = value.slice(key.length + 1).trim()
-  }
-
-  return value.replace(/^['"]|['"]$/g, "").trim()
-}
-
-function getStripeSecretKey() {
-  return readEnvValue("STRIPE_SECRET_KEY")
-}
-
-function getSiteUrl() {
-  return readEnvValue("NEXT_PUBLIC_SITE_URL") || "https://cancelit.app"
-}
-
-function isPlanTier(value: unknown): value is PlanTier {
-  return value === "minimum" || value === "medium" || value === "maximum"
-}
+import {
+  getConfiguredStripePlan,
+  getConfiguredStripePlanByPriceId,
+  getSiteUrl,
+  getStripeSecretKey,
+  isStripePlanTier,
+  isValidStripeSecretKey,
+} from "@/lib/stripe/config"
 
 export async function POST(request: NextRequest) {
   try {
     const stripeSecretKey = getStripeSecretKey()
 
-    if (!stripeSecretKey.startsWith("sk_")) {
+    if (!isValidStripeSecretKey(stripeSecretKey)) {
       return NextResponse.json({ error: "Stripe configuration error. Please contact support." }, { status: 500 })
     }
 
     const siteUrl = getSiteUrl()
     const { priceId, tier } = await request.json()
 
-    const plan = isPlanTier(tier)
-      ? configuredPlans.find((candidate) => candidate.tier === tier)
-      : configuredPlans.find((candidate) => candidate.priceId === priceId)
+    const plan = isStripePlanTier(tier) ? getConfiguredStripePlan(tier) : getConfiguredStripePlanByPriceId(priceId)
 
     if (!plan?.priceId) {
       return NextResponse.json({ error: "This Stripe plan is not configured yet. Please contact support." }, { status: 500 })
