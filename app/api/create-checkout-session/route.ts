@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
 import { createClient } from "@/lib/supabase/route-client"
 import {
+  type StripePlanConfig,
   getConfiguredStripePlan,
   getConfiguredStripePlanByPriceId,
   getSiteUrl,
@@ -9,6 +10,47 @@ import {
   isStripePlanTier,
   isValidStripeSecretKey,
 } from "@/lib/stripe/config"
+
+function isActiveMonthlyPrice(price: Stripe.Price) {
+  return price.active && price.type === "recurring" && price.recurring?.interval === "month"
+}
+
+function isExpectedPlanPrice(price: Stripe.Price, plan: StripePlanConfig) {
+  return isActiveMonthlyPrice(price) && price.currency === "usd" && price.unit_amount === plan.unitAmount
+}
+
+async function resolveStripePriceId(stripe: Stripe, plan: StripePlanConfig) {
+  const configuredId = plan.priceId.trim()
+
+  if (configuredId.startsWith("price_")) {
+    await stripe.prices.retrieve(configuredId)
+    return configuredId
+  }
+
+  if (!configuredId.startsWith("prod_")) {
+    throw new Error(`${plan.name} is missing a Stripe price ID. Configure a price_... value in Vercel.`)
+  }
+
+  const prices = await stripe.prices.list({
+    active: true,
+    product: configuredId,
+    type: "recurring",
+    limit: 100,
+  })
+
+  const matchingPrice = prices.data.find((price) => isExpectedPlanPrice(price, plan))
+  const monthlyPrice = prices.data.find(isActiveMonthlyPrice)
+
+  const resolvedPrice = matchingPrice || monthlyPrice
+
+  if (!resolvedPrice) {
+    throw new Error(
+      `${plan.name} is configured with a Stripe product ID, but no active monthly price was found for that product.`,
+    )
+  }
+
+  return resolvedPrice.id
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +83,7 @@ export async function POST(request: NextRequest) {
       apiVersion: "2024-12-18.acacia",
     })
 
-    await stripe.prices.retrieve(plan.priceId)
+    const resolvedPriceId = await resolveStripePriceId(stripe, plan)
 
     const metadata = {
       userId: user.id,
@@ -54,7 +96,7 @@ export async function POST(request: NextRequest) {
       payment_method_types: ["card"],
       line_items: [
         {
-          price: plan.priceId,
+          price: resolvedPriceId,
           quantity: 1,
         },
       ],
