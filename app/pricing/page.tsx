@@ -9,24 +9,35 @@ import { SiteFooter } from "@/components/marketing/site-footer"
 import { Check, Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
-const plans = [
+type PlanTier = "free" | "minimum" | "medium" | "maximum"
+
+const plans: Array<{
+  name: string
+  tier: PlanTier
+  price: string
+  description: string
+  features: string[]
+  popular?: boolean
+  free?: boolean
+}> = [
   {
     name: "Free",
+    tier: "free",
     price: "$0",
     description: "For trying CancelIt before paying.",
     features: ["Track up to 5 subscriptions", "Plaid scan returns up to 5 matches", "Basic dashboard access"],
-    priceId: undefined,
     free: true,
   },
   {
     name: "Starter",
+    tier: "minimum",
     price: "$4.99",
     description: "For a short personal list and light cleanup.",
     features: ["Track up to 10 subscriptions", "Plaid scan returns up to 10 matches", "Basic spending view", "Renewal reminders"],
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_MINIMUM,
   },
   {
     name: "Plus",
+    tier: "medium",
     price: "$12.99",
     description: "Best for a full scan, cancellation guidance, and savings help.",
     features: [
@@ -37,11 +48,11 @@ const plans = [
       "Renewal priority queue",
       "Export reports",
     ],
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_MEDIUM,
     popular: true,
   },
   {
     name: "Unlimited",
+    tier: "maximum",
     price: "$19.99",
     description: "For heavy cleanup and ongoing subscription control.",
     features: [
@@ -53,7 +64,6 @@ const plans = [
       "Custom categories",
       "Team-ready exports",
     ],
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_MAXIMUM,
   },
 ]
 
@@ -81,12 +91,7 @@ export default function PricingPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  const handleSubscribe = async (priceId: string | undefined, planName: string) => {
-    if (!priceId) {
-      alert("This plan is not configured yet. Please contact support.")
-      return
-    }
-
+  const handleSubscribe = async (tier: Exclude<PlanTier, "free">, planName: string) => {
     try {
       setLoadingPlan(planName)
 
@@ -104,7 +109,7 @@ export default function PricingPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ priceId }),
+        body: JSON.stringify({ tier }),
       })
 
       const data = await response.json()
@@ -178,7 +183,9 @@ export default function PricingPage() {
                   plan.popular ? "bg-white text-red-600 hover:bg-white/90" : "bg-white/[0.06] text-white hover:bg-white/[0.1]"
                 }`}
                 disabled={loadingPlan !== null}
-                onClick={() => (plan.free ? router.push("/signup") : handleSubscribe(plan.priceId, plan.name))}
+                onClick={() =>
+                  plan.free ? router.push("/signup") : handleSubscribe(plan.tier as Exclude<PlanTier, "free">, plan.name)
+                }
               >
                 {loadingPlan === plan.name ? (
                   <span className="flex items-center gap-2">
