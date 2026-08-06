@@ -3,11 +3,15 @@ import { CancelItLogo } from "@/components/brand/cancelit-logo"
 import { ArrowRight } from "lucide-react"
 import Link from "next/link"
 
-export function SiteNav() {
+interface SiteNavProps {
+  logoHref?: string
+}
+
+export function SiteNav({ logoHref = "/" }: SiteNavProps) {
   return (
     <nav className="sticky top-0 z-50 border-b border-white/[0.07] bg-black/82 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-        <CancelItLogo imageClassName="h-9 w-9" />
+        <CancelItLogo href={logoHref} imageClassName="h-9 w-9" />
 
         <div className="hidden items-center gap-7 md:flex">
           <Link href="/#how" className="text-sm text-white/58 transition-colors hover:text-white">
