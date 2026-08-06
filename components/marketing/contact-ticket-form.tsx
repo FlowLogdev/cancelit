@@ -1,8 +1,9 @@
 "use client"
 
-import { CheckCircle2, Loader2, Mail, Send, Ticket } from "lucide-react"
+import { CheckCircle2, LayoutDashboard, Loader2, Mail, Send, Ticket } from "lucide-react"
+import { useRouter } from "next/navigation"
 import type { FormEvent } from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 const issueTypes = [
   "Billing Information",
@@ -34,10 +35,23 @@ const initialForm: FormState = {
 }
 
 export function ContactTicketForm() {
+  const router = useRouter()
   const [form, setForm] = useState<FormState>(initialForm)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<SuccessState | null>(null)
+
+  useEffect(() => {
+    if (!success) {
+      return
+    }
+
+    const redirectTimer = window.setTimeout(() => {
+      router.push("/dashboard")
+    }, 30000)
+
+    return () => window.clearTimeout(redirectTimer)
+  }, [router, success])
 
   function updateField(field: keyof FormState, value: string) {
     setForm((current) => ({ ...current, [field]: value }))
@@ -106,6 +120,17 @@ export function ContactTicketForm() {
               ? "A copy was sent to you and to CancelIt support."
               : success.emailWarning || "Save this ticket number for your records."}
           </p>
+          <p className="mt-3 text-xs font-medium text-emerald-100/70">
+            You will be returned to the dashboard automatically in 30 seconds.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard")}
+            className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-white px-4 text-sm font-bold text-black transition-colors hover:bg-white/90"
+          >
+            <LayoutDashboard className="h-4 w-4" />
+            Back to dashboard
+          </button>
         </div>
       )}
 
