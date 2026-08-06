@@ -21,13 +21,13 @@ const supportTopics = [
 export default function ContactPage() {
   return (
     <main className="min-h-screen bg-black text-white">
-      <SiteNav />
+      <SiteNav logoHref="/dashboard" />
 
       <section className="relative overflow-hidden border-b border-white/[0.07]">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:py-16">
           <div className="space-y-8">
             <div className="space-y-5">
-              <CancelItLogo imageClassName="h-12 w-12" textClassName="text-3xl" />
+              <CancelItLogo href="/dashboard" imageClassName="h-12 w-12" textClassName="text-3xl" />
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-red-300">Contact Information</p>
                 <h1 className="mt-3 max-w-xl text-4xl font-black tracking-tight text-white sm:text-5xl">
