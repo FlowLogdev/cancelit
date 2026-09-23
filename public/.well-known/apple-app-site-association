@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["RA23AA27SX.app.cancelit.ios"],
+        "components": [
+          {
+            "/": "/plaid/*",
+            "comment": "Allow Plaid OAuth redirects to return to the CancelIt iOS app."
+          }
+        ]
+      }
+    ]
+  }
+}
