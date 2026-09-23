@@ -17,13 +17,16 @@ Native SwiftUI shell for CancelIt, designed to reuse the production web backend 
   - `/api/ai-chat`
   - `/api/create-checkout-session`
   - `/api/customers`
-- XcodeGen project definition with Supabase Swift and Plaid LinkKit SPM dependencies.
+- XcodeGen project definition with Supabase Swift, Plaid LinkKit, and RevenueCat SPM dependencies.
 
 ## Setup
 
 1. Install Xcode 16.1+ and XcodeGen on macOS.
-2. Fill in `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `Config.xcconfig`.
-4. Run:
+2. Fill in `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and the public iOS RevenueCat SDK key in `Config.xcconfig`.
+3. In RevenueCat, create the `minimum`, `medium`, and `maximum` entitlements; attach the matching App Store subscriptions; and add packages named `starter`, `plus`, and `unlimited` to the current offering.
+4. Set the RevenueCat webhook to `https://cancelit.app/api/revenuecat/webhook` and configure the same authorization secret in Vercel as `REVENUECAT_WEBHOOK_AUTHORIZATION`.
+5. Add the RevenueCat product IDs in Vercel as `REVENUECAT_PRODUCT_MINIMUM`, `REVENUECAT_PRODUCT_MEDIUM`, and `REVENUECAT_PRODUCT_MAXIMUM` so the web backend applies the correct CancelIt plan limits.
+6. Run:
 
 ```sh
 cd ios/CancelIt
@@ -36,4 +39,4 @@ open CancelIt.xcodeproj
 - Plaid LinkKit 7 is configured through Swift Package Manager. The runtime flow expects a mobile-safe link token from the web backend.
 - Supabase OAuth/deep links should call `supabase.auth.handle(url)` from `CancelItApp`.
 - The current backend creates Plaid link tokens with web OAuth redirect URIs. For a production App Store build, add an iOS-specific redirect URI and Associated Domains.
-- Stripe billing opens the hosted checkout URL in Safari. Review App Store requirements before shipping paid digital features; Apple In-App Purchase may be required depending on final positioning.
+- RevenueCat identifies customers using their Supabase user UUID. Its webhook is the source of truth for applying entitlements to the shared backend, including Plaid limits.

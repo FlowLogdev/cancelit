@@ -13,7 +13,7 @@ const knownCancellationSteps: Record<string, string[]> = {
 function monthlyCost(subscription: { cost: number | null; amount: number | null; billing_cycle: string }) {
   const value = Number(subscription.cost ?? subscription.amount ?? 0)
   if (subscription.billing_cycle === "yearly") return value / 12
-  if (subscription.billing_cycle === "weekly") return value * 4.33
+  if (subscription.billing_cycle === "weekly") return (value * 52) / 12
   return value
 }
 
@@ -81,6 +81,12 @@ export async function POST(request: Request) {
     )
     const totalMonthly = activeSubscriptions.reduce((total, subscription) => total + monthlyCost(subscription), 0)
     const sortedByCost = [...activeSubscriptions].sort((a, b) => monthlyCost(b) - monthlyCost(a))
+    const categoryTotals = activeSubscriptions.reduce<Record<string, number>>((totals, subscription) => {
+      const category = subscription.category || "Other"
+      totals[category] = (totals[category] || 0) + monthlyCost(subscription)
+      return totals
+    }, {})
+    const topCategory = Object.entries(categoryTotals).sort(([, left], [, right]) => right - left)[0]
     const upcoming = [...activeSubscriptions]
       .filter((subscription) => subscription.next_billing_date)
       .slice(0, 3)
@@ -105,7 +111,22 @@ export async function POST(request: Request) {
           2,
         )} per month, or $${(totalMonthly * 12).toFixed(2)} per year. Your ${tier} plan can track ${
           Number.isFinite(limits.trackedSubscriptions) ? limits.trackedSubscriptions : "unlimited"
-        } subscriptions.`,
+        } subscriptions.${topCategory ? ` Your largest category is ${topCategory[0]} at about $${topCategory[1].toFixed(2)}/mo.` : ""}`,
+      })
+    }
+
+    if (normalizedMessage.includes("save") || normalizedMessage.includes("tip") || normalizedMessage.includes("reduce")) {
+      const top = sortedByCost[0]
+      const categoryTip = topCategory
+        ? `${topCategory[0]} is your biggest category at $${topCategory[1].toFixed(2)}/mo; compare overlapping services there first.`
+        : ""
+      return NextResponse.json({
+        reply: [
+          top ? `Start with ${top.name}: it costs about $${monthlyCost(top).toFixed(2)}/mo.` : "Start by reviewing your least-used subscription.",
+          categoryTip,
+          "Use CancelIt to remove anything you do not want to track, then request a cancellation guide for services you no longer use.",
+          `Saving just one $${top ? monthlyCost(top).toFixed(2) : "10.00"}/mo service keeps about $${top ? (monthlyCost(top) * 12).toFixed(2) : "120.00"} per year in your budget.`,
+        ].filter(Boolean).join("\n\n"),
       })
     }
 

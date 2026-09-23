@@ -13,6 +13,22 @@ type ImportSubscription = {
   category?: string
 }
 
+function normalizedMerchant(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]/g, "")
+}
+
+function normalizedCategory(value?: string) {
+  const raw = value?.trim()
+  if (!raw) return "Other"
+  const lower = raw.toLowerCase()
+  if (lower.includes("stream") || lower.includes("entertainment")) return "Streaming & entertainment"
+  if (lower.includes("music")) return "Music & audio"
+  if (lower.includes("software") || lower.includes("technology")) return "Software & tools"
+  if (lower.includes("health") || lower.includes("fitness")) return "Health & fitness"
+  if (lower.includes("news") || lower.includes("education")) return "Learning & news"
+  return raw.replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
 function nextBillingDate(lastPaymentDate?: string, frequency: "weekly" | "monthly" | "yearly" = "monthly") {
   const date = lastPaymentDate ? new Date(`${lastPaymentDate}T00:00:00`) : new Date()
 
@@ -78,7 +94,26 @@ export async function POST(request: Request) {
       )
     }
 
-    const limited = Number.isFinite(remaining) ? subscriptions.slice(0, remaining) : subscriptions
+    const { data: existingSubscriptions, error: existingError } = await supabase
+      .from("subscriptions")
+      .select("name")
+      .eq("user_id", user.id)
+
+    if (existingError) {
+      console.error("Error checking duplicate subscriptions:", existingError)
+      return NextResponse.json({ error: "Failed to prepare your import." }, { status: 500 })
+    }
+
+    const existingMerchants = new Set((existingSubscriptions || []).map((item) => normalizedMerchant(item.name || "")))
+    const seenInImport = new Set<string>()
+    const unique = subscriptions.filter((subscription) => {
+      const name = subscription.merchant_name || subscription.merchantName || ""
+      const key = normalizedMerchant(name)
+      if (!key || existingMerchants.has(key) || seenInImport.has(key)) return false
+      seenInImport.add(key)
+      return true
+    })
+    const limited = Number.isFinite(remaining) ? unique.slice(0, remaining) : unique
     const rows = limited
       .map((subscription) => {
         const name = subscription.merchant_name || subscription.merchantName
@@ -96,7 +131,7 @@ export async function POST(request: Request) {
           next_billing_date:
             subscription.next_billing_date || nextBillingDate(subscription.last_payment_date || subscription.lastCharge, frequency),
           status: "active",
-          category: subscription.category || "Detected by Plaid",
+          category: normalizedCategory(subscription.category),
           notes: "Imported from Plaid transaction analysis.",
         }
       })

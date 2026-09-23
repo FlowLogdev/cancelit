@@ -22,6 +22,8 @@ final class AppState {
   ]
   var toast: AppToast?
 
+  var insights: SubscriptionInsights { SubscriptionInsights.from(subscriptions) }
+
   let api = APIClient(baseURL: AppConfig.apiBaseURL)
   let auth: AuthService
   let billing = BillingService()
@@ -119,6 +121,19 @@ final class AppState {
     } catch {
       toast = .error(error.localizedDescription)
       return nil
+    }
+  }
+
+  func removeSubscription(_ subscription: Subscription) async -> Bool {
+    do {
+      try await api.delete("/api/subscriptions/\(subscription.id)", token: await auth.accessToken)
+      subscriptions.removeAll { $0.id == subscription.id }
+      dashboard = DashboardSnapshot.from(subscriptions: subscriptions, customer: nil)
+      toast = .success("Removed \(subscription.name) from your tracker.")
+      return true
+    } catch {
+      toast = .error(error.localizedDescription)
+      return false
     }
   }
 

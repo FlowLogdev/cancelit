@@ -179,26 +179,47 @@ struct ImportReviewView: View {
   @Binding var selected: Set<String>
   @State private var isImporting = false
 
+  private var sortedDetected: [DetectedSubscription] {
+    appState.detectedSubscriptions.sorted { monthlyAmount(for: $0) > monthlyAmount(for: $1) }
+  }
+
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
-      Text("Detected subscriptions")
-        .font(.headline)
+      HStack {
+        VStack(alignment: .leading, spacing: 4) {
+          Text("Review before importing").font(.headline)
+          Text("Choose only the recurring charges you want CancelIt to track.").font(.caption).foregroundStyle(CancelItTheme.muted)
+        }
+        Spacer()
+        Text("\(selected.count) selected").font(.caption.bold()).foregroundStyle(CancelItTheme.accent)
+      }
 
       if appState.detectedSubscriptions.isEmpty {
         EmptyStateView(icon: "magnifyingglass", title: "Nothing ready to import", message: "Scan a connected bank to review recurring charges.")
       } else {
-        ForEach(appState.detectedSubscriptions) { subscription in
+        ForEach(sortedDetected) { subscription in
           Toggle(isOn: Binding(
             get: { selected.contains(subscription.id) },
             set: { isOn in
               if isOn { selected.insert(subscription.id) } else { selected.remove(subscription.id) }
             }
           )) {
-            VStack(alignment: .leading, spacing: 4) {
-              Text(subscription.merchantName)
-              Text(subscription.amount, format: .currency(code: "USD"))
-                .font(.caption)
-                .foregroundStyle(CancelItTheme.muted)
+            HStack(spacing: 12) {
+              Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
+                .foregroundStyle(CancelItTheme.accent)
+              VStack(alignment: .leading, spacing: 4) {
+                Text(subscription.merchantName).font(.headline)
+                Text("\(subscription.category ?? "Other") · \(subscription.frequency.capitalized)")
+                  .font(.caption).foregroundStyle(CancelItTheme.muted)
+                if let nextDate = subscription.nextBillingDate {
+                  Text("Next expected \(nextDate)").font(.caption2).foregroundStyle(CancelItTheme.muted)
+                }
+              }
+              Spacer()
+              VStack(alignment: .trailing, spacing: 2) {
+                Text(monthlyAmount(for: subscription), format: .currency(code: "USD")).font(.headline)
+                Text("monthly eq.").font(.caption2).foregroundStyle(CancelItTheme.muted)
+              }
             }
           }
           .toggleStyle(.switch)
@@ -237,6 +258,14 @@ struct ImportReviewView: View {
       await appState.refresh()
     } catch {
       appState.toast = .error(error.localizedDescription)
+    }
+  }
+
+  private func monthlyAmount(for subscription: DetectedSubscription) -> Double {
+    switch subscription.frequency.lowercased() {
+    case "weekly": subscription.amount * 52 / 12
+    case "yearly", "annual": subscription.amount / 12
+    default: subscription.amount
     }
   }
 }

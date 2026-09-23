@@ -26,6 +26,13 @@ struct APIClient {
     return try await send(request)
   }
 
+  func delete(_ path: String, token: String?) async throws {
+    var request = URLRequest(url: baseURL.appending(path: path))
+    request.httpMethod = "DELETE"
+    authorize(&request, token: token)
+    let _: DeleteEnvelope = try await send(request)
+  }
+
   private func authorize(_ request: inout URLRequest, token: String?) {
     if let token {
       request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -61,4 +68,8 @@ enum CancelItError: LocalizedError {
 
 struct ErrorEnvelope: Decodable {
   let error: String
+}
+
+private struct DeleteEnvelope: Decodable {
+  let deleted: Bool
 }
