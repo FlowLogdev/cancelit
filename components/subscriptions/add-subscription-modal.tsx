@@ -78,21 +78,25 @@ export function AddSubscriptionModal({ open, onOpenChange, onSuccess }: AddSubsc
 
       const nextBillingDate = getNextBillingDate(parsed.data.first_billed_at, parsed.data.billing_cycle)
 
-      const { error } = await supabase.from("subscriptions").insert({
-        user_id: user.id,
-        name: parsed.data.name,
-        cost: parsed.data.cost,
-        amount: parsed.data.cost,
-        billing_cycle: parsed.data.billing_cycle,
-        next_billing_date: formatISO(nextBillingDate, { representation: "date" }),
-        status: "active",
+      const response = await fetch("/api/subscriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: parsed.data.name,
+          cost: parsed.data.cost,
+          billing_cycle: parsed.data.billing_cycle,
+          next_billing_date: formatISO(nextBillingDate, { representation: "date" }),
+          status: "active",
+        }),
       })
 
-      if (error) {
+      const result = await response.json()
+
+      if (!response.ok) {
         toast({
           variant: "destructive",
-          title: "Something went wrong",
-          description: error.message,
+          title: response.status === 402 ? "Plan limit reached" : "Something went wrong",
+          description: result.error || "Failed to add subscription.",
         })
         return
       }
