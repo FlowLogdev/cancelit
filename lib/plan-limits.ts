@@ -1,24 +1,31 @@
 export type PlanTier = "free" | "minimum" | "medium" | "maximum"
 
-export const PLAN_LIMITS: Record<PlanTier, { trackedSubscriptions: number; plaidImportLimit: number; aiAssistant: boolean }> = {
+export const PLAN_LIMITS: Record<
+  PlanTier,
+  { trackedSubscriptions: number; plaidImportLimit: number; plaidAccountLimit: number; aiAssistant: boolean }
+> = {
   free: {
     trackedSubscriptions: 5,
     plaidImportLimit: 5,
+    plaidAccountLimit: 5,
     aiAssistant: false,
   },
   minimum: {
     trackedSubscriptions: 10,
     plaidImportLimit: 10,
+    plaidAccountLimit: 10,
     aiAssistant: false,
   },
   medium: {
     trackedSubscriptions: 50,
     plaidImportLimit: 50,
+    plaidAccountLimit: 50,
     aiAssistant: true,
   },
   maximum: {
     trackedSubscriptions: Number.POSITIVE_INFINITY,
     plaidImportLimit: Number.POSITIVE_INFINITY,
+    plaidAccountLimit: Number.POSITIVE_INFINITY,
     aiAssistant: true,
   },
 }

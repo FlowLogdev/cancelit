@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/route-client"
+import { formatLimit, getPlanLimits, normalizeTier } from "@/lib/plan-limits"
 import { NextResponse } from "next/server"
 import { Configuration, PlaidApi, PlaidEnvironments } from "plaid"
 
@@ -48,6 +49,35 @@ export async function POST(request: Request) {
 
     if (!public_token) {
       return NextResponse.json({ error: "Public token is required" }, { status: 400 })
+    }
+
+    const { data: customerData } = await supabase
+      .from("customers")
+      .select("subscription_tier")
+      .eq("user_id", user.id)
+      .maybeSingle()
+
+    const tier = normalizeTier((customerData as { subscription_tier: string | null } | null)?.subscription_tier)
+    const limits = getPlanLimits(tier, user.email)
+
+    const { count: existingAccountCount } = await supabase
+      .from("plaid_accounts")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+
+    const incomingAccountCount = Array.isArray(accounts) ? accounts.length : 1
+    const projectedTotal = (existingAccountCount || 0) + incomingAccountCount
+
+    if (Number.isFinite(limits.plaidAccountLimit) && projectedTotal > limits.plaidAccountLimit) {
+      return NextResponse.json(
+        {
+          error: `Your ${tier} plan can connect up to ${formatLimit(limits.plaidAccountLimit)} Plaid accounts. Upgrade your plan to connect more.`,
+          code: "PLAID_ACCOUNT_LIMIT_REACHED",
+          tier,
+          plan_limit: formatLimit(limits.plaidAccountLimit),
+        },
+        { status: 402 },
+      )
     }
 
     if (institution?.institution_id) {
