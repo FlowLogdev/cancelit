@@ -5,6 +5,7 @@ struct DashboardView: View {
   @Environment(AppState.self) private var appState
   @State private var showPricing = false
   @State private var showPlaid = false
+  @State private var showBankManagement = false
 
   var body: some View {
     ScrollView {
@@ -17,8 +18,12 @@ struct DashboardView: View {
         MonthlySpendHeader(insights: appState.insights)
 
         HStack(spacing: 12) {
-          Button { showPlaid = true } label: { Label("Scan bank", systemImage: "building.columns") }.buttonStyle(PrimaryButtonStyle())
+          Button { showPlaid = true } label: { Label(appState.connectedItems.isEmpty ? "Connect bank" : "Scan bank", systemImage: "building.columns") }.buttonStyle(PrimaryButtonStyle())
           Button { showPricing = true } label: { Label("Plans", systemImage: "crown") }.buttonStyle(SecondaryButtonStyle())
+        }
+
+        ConnectedBanksCard(items: appState.connectedItems) {
+          showBankManagement = true
         }
 
         CategorySpendCard(insights: appState.insights)
@@ -40,7 +45,45 @@ struct DashboardView: View {
     .navigationDestination(for: Subscription.self) { SubscriptionDetailView(subscription: $0) }
     .sheet(isPresented: $showPricing) { PricingView() }
     .sheet(isPresented: $showPlaid) { PlaidConnectView() }
+    .sheet(isPresented: $showBankManagement) { PlaidConnectView() }
     .refreshable { await appState.refresh() }
+  }
+}
+
+private struct ConnectedBanksCard: View {
+  let items: [PlaidItem]
+  let manage: () -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack {
+        Label("Connected banks", systemImage: "building.columns.fill").font(.headline)
+        Spacer()
+        Button("Manage", action: manage)
+          .font(.subheadline.bold())
+      }
+
+      if items.isEmpty {
+        Text("No bank is connected yet. Connect one to find recurring charges.")
+          .font(.subheadline)
+          .foregroundStyle(CancelItTheme.muted)
+      } else {
+        ForEach(items) { item in
+          HStack(spacing: 10) {
+            Image(systemName: "checkmark.shield.fill").foregroundStyle(.green)
+            Text(item.institutionName ?? "Connected bank").font(.subheadline)
+            Spacer()
+            Text(item.status == "active" ? "Connected" : (item.status ?? "Connected"))
+              .font(.caption)
+              .foregroundStyle(CancelItTheme.muted)
+          }
+        }
+      }
+    }
+    .padding(18)
+    .background(CancelItTheme.surface)
+    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    .overlay(RoundedRectangle(cornerRadius: 16).stroke(CancelItTheme.border))
   }
 }
 

@@ -64,7 +64,7 @@ struct AppShellView: View {
         .tabItem { Label(AppTab.subscriptions.title, systemImage: AppTab.subscriptions.icon) }
         .tag(AppTab.subscriptions)
 
-      NavigationStack { AssistantView() }
+      NavigationStack { AssistantView(selectedTab: $selectedTab) }
         .tabItem { Label(AppTab.assistant.title, systemImage: AppTab.assistant.icon) }
         .tag(AppTab.assistant)
 
@@ -75,4 +75,3 @@ struct AppShellView: View {
     .background(CancelItTheme.background)
   }
 }
-

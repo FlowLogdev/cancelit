@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AssistantView: View {
   @Environment(AppState.self) private var appState
+  @Binding var selectedTab: AppTab
   @State private var draft = ""
   @State private var isSending = false
 
@@ -48,6 +49,16 @@ struct AssistantView: View {
     }
     .background(CancelItTheme.background.ignoresSafeArea())
     .navigationTitle("Assistant")
+    .toolbar {
+      ToolbarItem(placement: .topBarLeading) {
+        Button {
+          selectedTab = .dashboard
+        } label: {
+          Label("Dashboard", systemImage: "house")
+        }
+        .accessibilityLabel("Back to dashboard")
+      }
+    }
   }
 
   private func send() async {
@@ -75,4 +86,3 @@ struct AssistantBubble: View {
     }
   }
 }
-

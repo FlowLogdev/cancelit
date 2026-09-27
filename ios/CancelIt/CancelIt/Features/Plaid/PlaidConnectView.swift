@@ -10,6 +10,7 @@ struct PlaidConnectView: View {
   @State private var isPresentingLink = false
   @State private var selected: Set<String> = []
   @State private var notice: String?
+  @State private var itemPendingRemoval: PlaidItem?
 
   var body: some View {
     NavigationStack {
@@ -45,6 +46,12 @@ struct PlaidConnectView: View {
                     Task { await scan(item: item) }
                   }
                   .buttonStyle(.borderedProminent)
+                  Button(role: .destructive) {
+                    itemPendingRemoval = item
+                  } label: {
+                    Image(systemName: "link.badge.minus")
+                  }
+                  .accessibilityLabel("Unlink \(item.institutionName ?? "bank connection")")
                 }
                 .padding(14)
                 .background(CancelItTheme.surface)
@@ -81,6 +88,26 @@ struct PlaidConnectView: View {
       if let linkSession {
         linkSession.sheet()
       }
+    }
+    .alert(
+      "Unlink bank?",
+      isPresented: Binding(
+        get: { itemPendingRemoval != nil },
+        set: { if !$0 { itemPendingRemoval = nil } }
+      ),
+      presenting: itemPendingRemoval
+    ) { item in
+      Button("Unlink", role: .destructive) {
+        Task { @MainActor in
+          _ = await appState.unlinkPlaidItem(item)
+          itemPendingRemoval = nil
+        }
+      }
+      Button("Keep connected", role: .cancel) {
+        itemPendingRemoval = nil
+      }
+    } message: { item in
+      Text("This revokes CancelIt’s access to \(item.institutionName ?? "this bank") and removes its linked account records. Your tracked subscriptions stay in your dashboard.")
     }
   }
 

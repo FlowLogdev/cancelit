@@ -137,6 +137,20 @@ final class AppState {
     }
   }
 
+  func unlinkPlaidItem(_ item: PlaidItem) async -> Bool {
+    do {
+      let encodedItemId = item.itemId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? item.itemId
+      try await api.delete("/api/plaid/accounts/\(encodedItemId)", token: await auth.accessToken)
+      connectedItems.removeAll { $0.id == item.id }
+      detectedSubscriptions = []
+      toast = .success("Unlinked \(item.institutionName ?? "bank connection"). Your tracked subscriptions were kept.")
+      return true
+    } catch {
+      toast = .error(error.localizedDescription)
+      return false
+    }
+  }
+
   func handle(url: URL) {
     auth.handle(url: url)
   }
