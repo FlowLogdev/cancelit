@@ -2,6 +2,13 @@ import { createClient } from "@/lib/supabase/route-client"
 import { getPlanLimits, normalizeTier } from "@/lib/plan-limits"
 import { NextResponse } from "next/server"
 
+export const maxDuration = 20
+
+const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
+const ANTHROPIC_VERSION = "2023-06-01"
+const DEFAULT_ADVISOR_MODEL = "claude-3-5-haiku-20241022"
+const XAI_CHAT_API_URL = "https://api.x.ai/v1/chat/completions"
+
 const knownCancellationSteps: Record<string, string[]> = {
   netflix: ["Go to netflix.com/cancelplan.", "Sign in if asked.", "Choose Finish Cancellation and save the confirmation."],
   spotify: ["Go to spotify.com/account/subscription.", "Open Manage your plan.", "Choose Change or cancel and confirm."],
@@ -55,6 +62,127 @@ function matchesMentionedAmount(subscriptionAmount: number, mentionedAmount: num
 function isEssentialOrPayment(subscription: { name: string; category: string | null }) {
   const text = `${subscription.name} ${subscription.category || ""}`.toLowerCase().replace(/[_-]+/g, " ")
   return [...essentialExpenseTerms, ...nonSubscriptionTerms].some((term) => text.includes(term))
+}
+
+type AdvisorSubscription = {
+  id: string
+  name: string
+  cost: number | null
+  amount: number | null
+  billing_cycle: string
+  category: string | null
+}
+
+function advisorSnapshot(subscriptions: AdvisorSubscription[], protectedIds: Set<string>) {
+  return subscriptions.map((subscription) => ({
+    name: subscription.name,
+    monthlyAmount: Number(monthlyCost(subscription).toFixed(2)),
+    category: subscription.category || "Uncategorized",
+    treatment: protectedIds.has(subscription.id) || isEssentialOrPayment(subscription) ? "protect / verify; do not recommend cancellation" : "possible optional service; verify before cancellation",
+  }))
+}
+
+async function generateSavingsCoachReply({
+  message,
+  history,
+  subscriptions,
+  protectedIds,
+}: {
+  message: string
+  history: Array<{ role: "user" | "assistant"; text: string }>
+  subscriptions: AdvisorSubscription[]
+  protectedIds: Set<string>
+}) {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  const xaiApiKey = process.env.XAI_API_KEY
+  if (!apiKey && !xaiApiKey) return null
+
+  const recentMessages = history
+    .slice(-6)
+    .filter((entry) => entry && (entry.role === "user" || entry.role === "assistant") && typeof entry.text === "string")
+    .map((entry) => ({ role: entry.role, content: entry.text.slice(0, 700) }))
+
+  const system = [
+    "You are CancelIt Savings Coach. Help a user understand recurring spending and safely find realistic ways to save money.",
+    "You are not a licensed financial adviser. Do not give investment, tax, legal, credit-repair, or debt-restructuring advice.",
+    "Treat rent, mortgages, utilities, insurance, loans, transfers, withdrawals, bank fees, and unrecognized transactions as protected or verify-first. Never suggest cancelling them merely because they are expensive.",
+    "Recommend action only for a recognizable, optional recurring service after explaining why it may be worth reviewing. Never claim a charge is definitely a subscription when the merchant is unclear.",
+    "Be practical and personalized: say what to keep protected, identify one to three safe opportunities, and give one next action for each. For an unknown charge, tell the user to verify it with their statement or bank before doing anything.",
+    "Use headings: What I see, Best next steps, and Potential savings. Keep the reply below 180 words. Do not request credentials, card numbers, account numbers, passwords, or codes.",
+    `User's recurring-spend snapshot: ${JSON.stringify(advisorSnapshot(subscriptions, protectedIds))}`,
+  ].join("\n")
+
+  const messages = recentMessages.at(-1)?.role === "user" && recentMessages.at(-1)?.content === message
+    ? recentMessages
+    : [...recentMessages, { role: "user" as const, content: message.slice(0, 700) }]
+
+  if (!apiKey && xaiApiKey) {
+    try {
+      const response = await fetch(XAI_CHAT_API_URL, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${xaiApiKey}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: process.env.XAI_MODEL || "latest",
+          max_tokens: 420,
+          temperature: 0.2,
+          messages: [{ role: "system", content: system }, ...messages],
+        }),
+      })
+
+      if (!response.ok) {
+        console.error("Savings coach xAI error:", response.status)
+        return null
+      }
+
+      const data = await response.json()
+      const reply = data?.choices?.[0]?.message?.content
+      return typeof reply === "string" && reply.trim() ? reply.trim() : null
+    } catch (error) {
+      console.error("Savings coach xAI request failed:", error)
+      return null
+    }
+  }
+
+  try {
+
+    const response = await fetch(ANTHROPIC_API_URL, {
+      method: "POST",
+      headers: {
+        "anthropic-version": ANTHROPIC_VERSION,
+        "content-type": "application/json",
+        "x-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        model: process.env.ANTHROPIC_MODEL || DEFAULT_ADVISOR_MODEL,
+        max_tokens: 420,
+        temperature: 0.2,
+        system,
+        messages,
+      }),
+    })
+
+    if (!response.ok) {
+      console.error("Savings coach model error:", response.status)
+      return null
+    }
+
+    const data = await response.json()
+    const reply = Array.isArray(data?.content)
+      ? data.content
+          .filter((part: { type?: string; text?: string }) => part.type === "text" && typeof part.text === "string")
+          .map((part: { text: string }) => part.text.trim())
+          .filter(Boolean)
+          .join("\n")
+      : ""
+
+    return reply || null
+  } catch (error) {
+    console.error("Savings coach model request failed:", error)
+    return null
+  }
 }
 
 export async function POST(request: Request) {
@@ -183,6 +311,22 @@ export async function POST(request: Request) {
           "If you do not recognize a charge, investigate it with your bank or card issuer first; do not use a cancellation action for an unrecognized transaction.",
         ].join("\n\n"),
       })
+    }
+
+    const coachReply = await generateSavingsCoachReply({
+      message,
+      history: Array.isArray(history)
+        ? history
+            .filter((entry) => entry?.role === "user" || entry?.role === "assistant")
+            .map((entry) => ({ role: entry.role === "assistant" ? "assistant" as const : "user" as const, text: typeof entry?.text === "string" ? entry.text : "" }))
+            .filter((entry) => entry.text)
+        : [],
+      subscriptions: activeSubscriptions,
+      protectedIds: new Set([...protectedSubscriptionIds, ...safetyExcludedIds]),
+    })
+
+    if (coachReply) {
+      return NextResponse.json({ reply: coachReply })
     }
 
     if (guide) {
