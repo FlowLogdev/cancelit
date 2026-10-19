@@ -24,6 +24,19 @@ function findMerchantGuide(message: string) {
 }
 
 const essentialExpenseTerms = ["rent", "mortgage", "utility", "utilities", "electric", "water", "gas bill", "insurance", "childcare", "tuition", "loan payment"]
+const nonSubscriptionTerms = [
+  "withdrawal",
+  "transfer",
+  "transfer_out",
+  "cash withdrawal",
+  "atm",
+  "bank fee",
+  "overdraft",
+  "loan",
+  "lending",
+  "credit card payment",
+  "tax payment",
+]
 
 function mentionedAmounts(text: string) {
   return (text.match(/\$?\s?\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?/g) || [])
@@ -37,6 +50,11 @@ function matchesMentionedAmount(subscriptionAmount: number, mentionedAmount: num
   // so an essential-expense instruction cannot hide unrelated subscriptions.
   const tolerance = Math.max(1, Math.min(25, mentionedAmount * 0.01))
   return Math.abs(subscriptionAmount - mentionedAmount) <= tolerance
+}
+
+function isEssentialOrPayment(subscription: { name: string; category: string | null }) {
+  const text = `${subscription.name} ${subscription.category || ""}`.toLowerCase().replace(/[_-]+/g, " ")
+  return [...essentialExpenseTerms, ...nonSubscriptionTerms].some((term) => text.includes(term))
 }
 
 export async function POST(request: Request) {
@@ -118,7 +136,12 @@ export async function POST(request: Request) {
             .map((subscription) => subscription.id)
         : [],
     )
-    const reviewCandidates = sortedByCost.filter((subscription) => !protectedSubscriptionIds.has(subscription.id))
+    const safetyExcludedIds = new Set(
+      activeSubscriptions.filter(isEssentialOrPayment).map((subscription) => subscription.id),
+    )
+    const reviewCandidates = sortedByCost.filter(
+      (subscription) => !protectedSubscriptionIds.has(subscription.id) && !safetyExcludedIds.has(subscription.id),
+    )
     const categoryTotals = activeSubscriptions.reduce<Record<string, number>>((totals, subscription) => {
       const category = subscription.category || "Other"
       totals[category] = (totals[category] || 0) + monthlyCost(subscription)
@@ -142,14 +165,22 @@ export async function POST(request: Request) {
         .filter((subscription) => protectedSubscriptionIds.has(subscription.id))
         .map((subscription) => `${subscription.name} ($${monthlyCost(subscription).toFixed(2)}/mo)`)
       const nextReviews = reviewCandidates.slice(0, 3)
+      const otherPayments = sortedByCost
+        .filter((subscription) => safetyExcludedIds.has(subscription.id) && !protectedSubscriptionIds.has(subscription.id))
+        .slice(0, 3)
+        .map((subscription) => subscription.name)
 
       return NextResponse.json({
         reply: [
-          `Got it — I’ll treat ${protectedNames.join(" and ")} as an essential expense and will not recommend cancelling it in this chat. It stays included in your spending total.`,
+          `You are right — ${protectedNames.join(" and ")} is an essential expense, not a cancellation target. I will keep it in your spending total but will not suggest cancelling it.`,
+          "Practical next step: keep rent protected, then look only for optional services you can verify on your statement. Do not cancel a transfer, withdrawal, loan payment, or bill just because it is large.",
           nextReviews.length
-            ? `The next items worth reviewing are:\n${nextReviews.map((subscription, index) => `${index + 1}. ${subscription.name}: about $${monthlyCost(subscription).toFixed(2)}/mo`).join("\n")}`
-            : "I do not see another subscription to recommend reviewing yet.",
-          "If an item is a real subscription you no longer use, I can help you find its cancellation steps. Do not remove a bank connection just to hide an essential bill.",
+            ? `Only investigate these as possible optional subscriptions after you recognize the merchant:\n${nextReviews.map((subscription, index) => `${index + 1}. ${subscription.name}: about $${monthlyCost(subscription).toFixed(2)}/mo — confirm what it is before cancelling.`).join("\n")}`
+            : "I do not see a clearly optional subscription to recommend yet.",
+          otherPayments.length
+            ? `I will also avoid suggesting you cancel these payment-like entries until you verify them: ${otherPayments.join(", ")}.`
+            : "",
+          "If you do not recognize a charge, investigate it with your bank or card issuer first; do not use a cancellation action for an unrecognized transaction.",
         ].join("\n\n"),
       })
     }
@@ -200,7 +231,7 @@ export async function POST(request: Request) {
     if (reviewCandidates.length === 0) {
       return NextResponse.json({
         reply: activeSubscriptions.length
-          ? "I only see expenses you marked as essential. Add another subscription or tell me which service you are considering, and I can help without recommending essential bills."
+          ? "I do not see a clearly optional subscription yet. Your largest entries appear to be essential expenses or payment activity, so I will not recommend cancelling them. Verify any unfamiliar merchant with your statement or bank first, then tell me the service name and I can give you a safe cancellation path."
           : "I do not see active subscriptions yet. Add subscriptions manually or connect Plaid, then I can rank what to review first.",
       })
     }
@@ -210,10 +241,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       reply: [
-        "Start with the highest monthly impact:",
-        ...topThree.map((subscription, index) => `${index + 1}. ${subscription.name}: about $${monthlyCost(subscription).toFixed(2)}/mo`),
-        `If you cancel those, the possible savings is about $${savings.toFixed(2)}/mo or $${(savings * 12).toFixed(2)}/yr.`,
-        "Use the Request cancellation button beside each subscription when you want a tracked task and step-by-step instructions.",
+        "Here is a practical review plan — these are possible optional subscriptions, not essential bills or payment activity:",
+        ...topThree.map((subscription, index) => `${index + 1}. ${subscription.name}: about $${monthlyCost(subscription).toFixed(2)}/mo. First confirm the merchant and whether you still use it.`),
+        `If all three are optional and you stop them, the potential savings is about $${savings.toFixed(2)}/mo or $${(savings * 12).toFixed(2)}/yr.`,
+        "Do not cancel an item you do not recognize; check the bank statement or contact your bank first. Once you confirm an optional service, I can give you its cancellation steps.",
       ].join("\n"),
     })
   } catch (error: any) {
