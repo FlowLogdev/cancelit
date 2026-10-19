@@ -46,11 +46,10 @@ struct PlaidConnectView: View {
                     Task { await scan(item: item) }
                   }
                   .buttonStyle(.borderedProminent)
-                  Button(role: .destructive) {
+                  Button("Remove", role: .destructive) {
                     itemPendingRemoval = item
-                  } label: {
-                    Image(systemName: "link.badge.minus")
                   }
+                  .font(.subheadline.weight(.semibold))
                   .accessibilityLabel("Unlink \(item.institutionName ?? "bank connection")")
                 }
                 .padding(14)
