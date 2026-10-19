@@ -31,6 +31,14 @@ function mentionedAmounts(text: string) {
     .filter((amount) => Number.isFinite(amount) && amount > 0)
 }
 
+function matchesMentionedAmount(subscriptionAmount: number, mentionedAmount: number) {
+  // Bank descriptions and users often round or transpose a small fee. Treat a
+  // close match as the same charge, but keep the tolerance deliberately small
+  // so an essential-expense instruction cannot hide unrelated subscriptions.
+  const tolerance = Math.max(1, Math.min(25, mentionedAmount * 0.01))
+  return Math.abs(subscriptionAmount - mentionedAmount) <= tolerance
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
@@ -104,7 +112,7 @@ export async function POST(request: Request) {
         ? activeSubscriptions
             .filter((subscription) => {
               const nameIsEssential = essentialExpenseTerms.some((term) => subscription.name.toLowerCase().includes(term))
-              const amountWasNamed = amounts.some((amount) => Math.abs(monthlyCost(subscription) - amount) < 0.01)
+              const amountWasNamed = amounts.some((amount) => matchesMentionedAmount(monthlyCost(subscription), amount))
               return nameIsEssential || amountWasNamed
             })
             .map((subscription) => subscription.id)
