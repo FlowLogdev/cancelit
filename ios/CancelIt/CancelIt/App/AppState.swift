@@ -102,7 +102,14 @@ final class AppState {
     assistantMessages.append(message)
 
     do {
-      let response: AssistantReply = try await api.post("/api/ai-chat", body: AssistantRequest(message: text), token: await auth.accessToken)
+      let history = assistantMessages.suffix(8).map { entry in
+        AssistantConversationEntry(role: entry.role == .assistant ? "assistant" : "user", text: entry.text)
+      }
+      let response: AssistantReply = try await api.post(
+        "/api/ai-chat",
+        body: AssistantRequest(message: text, history: history),
+        token: await auth.accessToken,
+      )
       assistantMessages.append(.init(role: .assistant, text: response.reply))
     } catch {
       assistantMessages.append(.init(role: .assistant, text: "I could not reach the assistant. Try again in a moment."))

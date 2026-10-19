@@ -177,8 +177,14 @@ struct AppToast: Identifiable {
   static func error(_ title: String) -> AppToast { .init(title: title, isError: true) }
 }
 
+struct AssistantConversationEntry: Encodable {
+  let role: String
+  let text: String
+}
+
 struct AssistantRequest: Encodable {
   let message: String
+  let history: [AssistantConversationEntry]
 }
 
 struct CancellationRequest: Encodable {

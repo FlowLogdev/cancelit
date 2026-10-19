@@ -23,6 +23,14 @@ function findMerchantGuide(message: string) {
   return match ? { merchant: match[0], steps: match[1] } : null
 }
 
+const essentialExpenseTerms = ["rent", "mortgage", "utility", "utilities", "electric", "water", "gas bill", "insurance", "childcare", "tuition", "loan payment"]
+
+function mentionedAmounts(text: string) {
+  return (text.match(/\$?\s?\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?/g) || [])
+    .map((match) => Number(match.replace(/[^\d.]/g, "")))
+    .filter((amount) => Number.isFinite(amount) && amount > 0)
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
@@ -35,7 +43,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { message } = await request.json()
+    const { message, history } = await request.json()
 
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "Message is required" }, { status: 400 })
@@ -81,6 +89,28 @@ export async function POST(request: Request) {
     )
     const totalMonthly = activeSubscriptions.reduce((total, subscription) => total + monthlyCost(subscription), 0)
     const sortedByCost = [...activeSubscriptions].sort((a, b) => monthlyCost(b) - monthlyCost(a))
+    const recentConversation = Array.isArray(history)
+      ? history
+          .slice(-8)
+          .filter((entry) => entry?.role === "user")
+          .map((entry) => (typeof entry?.text === "string" ? entry.text : ""))
+          .filter(Boolean)
+      : []
+    const conversationText = [...recentConversation, message].join(" ").toLowerCase()
+    const essentialContext = essentialExpenseTerms.some((term) => conversationText.includes(term))
+    const amounts = mentionedAmounts(conversationText)
+    const protectedSubscriptionIds = new Set(
+      essentialContext
+        ? activeSubscriptions
+            .filter((subscription) => {
+              const nameIsEssential = essentialExpenseTerms.some((term) => subscription.name.toLowerCase().includes(term))
+              const amountWasNamed = amounts.some((amount) => Math.abs(monthlyCost(subscription) - amount) < 0.01)
+              return nameIsEssential || amountWasNamed
+            })
+            .map((subscription) => subscription.id)
+        : [],
+    )
+    const reviewCandidates = sortedByCost.filter((subscription) => !protectedSubscriptionIds.has(subscription.id))
     const categoryTotals = activeSubscriptions.reduce<Record<string, number>>((totals, subscription) => {
       const category = subscription.category || "Other"
       totals[category] = (totals[category] || 0) + monthlyCost(subscription)
@@ -94,6 +124,27 @@ export async function POST(request: Request) {
 
     const guide = findMerchantGuide(message)
     const normalizedMessage = message.toLowerCase()
+
+    const isProtectingAnExpense =
+      essentialContext &&
+      /(cannot|can't|cant|do not|don't|dont|not)\s+(?:cancel|remove)|is my (?:rent|mortgage)|keep/.test(normalizedMessage)
+
+    if (isProtectingAnExpense && protectedSubscriptionIds.size > 0) {
+      const protectedNames = sortedByCost
+        .filter((subscription) => protectedSubscriptionIds.has(subscription.id))
+        .map((subscription) => `${subscription.name} ($${monthlyCost(subscription).toFixed(2)}/mo)`)
+      const nextReviews = reviewCandidates.slice(0, 3)
+
+      return NextResponse.json({
+        reply: [
+          `Got it — I’ll treat ${protectedNames.join(" and ")} as an essential expense and will not recommend cancelling it in this chat. It stays included in your spending total.`,
+          nextReviews.length
+            ? `The next items worth reviewing are:\n${nextReviews.map((subscription, index) => `${index + 1}. ${subscription.name}: about $${monthlyCost(subscription).toFixed(2)}/mo`).join("\n")}`
+            : "I do not see another subscription to recommend reviewing yet.",
+          "If an item is a real subscription you no longer use, I can help you find its cancellation steps. Do not remove a bank connection just to hide an essential bill.",
+        ].join("\n\n"),
+      })
+    }
 
     if (guide) {
       return NextResponse.json({
@@ -116,7 +167,7 @@ export async function POST(request: Request) {
     }
 
     if (normalizedMessage.includes("save") || normalizedMessage.includes("tip") || normalizedMessage.includes("reduce")) {
-      const top = sortedByCost[0]
+      const top = reviewCandidates[0]
       const categoryTip = topCategory
         ? `${topCategory[0]} is your biggest category at $${topCategory[1].toFixed(2)}/mo; compare overlapping services there first.`
         : ""
@@ -138,13 +189,15 @@ export async function POST(request: Request) {
       })
     }
 
-    if (sortedByCost.length === 0) {
+    if (reviewCandidates.length === 0) {
       return NextResponse.json({
-        reply: "I do not see active subscriptions yet. Add subscriptions manually or connect Plaid, then I can rank what to review first.",
+        reply: activeSubscriptions.length
+          ? "I only see expenses you marked as essential. Add another subscription or tell me which service you are considering, and I can help without recommending essential bills."
+          : "I do not see active subscriptions yet. Add subscriptions manually or connect Plaid, then I can rank what to review first.",
       })
     }
 
-    const topThree = sortedByCost.slice(0, 3)
+    const topThree = reviewCandidates.slice(0, 3)
     const savings = topThree.reduce((total, subscription) => total + monthlyCost(subscription), 0)
 
     return NextResponse.json({
