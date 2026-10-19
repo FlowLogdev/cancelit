@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct AssistantView: View {
   @Environment(AppState.self) private var appState
@@ -73,15 +74,31 @@ struct AssistantView: View {
 
 struct AssistantBubble: View {
   let message: AssistantMessage
+  @State private var copied = false
 
   var body: some View {
     HStack {
       if message.role == .user { Spacer(minLength: 44) }
-      Text(message.text)
-        .padding(14)
-        .background(message.role == .user ? CancelItTheme.accent : CancelItTheme.surface)
-        .foregroundStyle(.white)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+      VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 6) {
+        Text(message.text)
+          .textSelection(.enabled)
+          .padding(14)
+          .background(message.role == .user ? CancelItTheme.accent : CancelItTheme.surface)
+          .foregroundStyle(.white)
+          .clipShape(RoundedRectangle(cornerRadius: 8))
+
+        if message.role == .assistant {
+          Button {
+            UIPasteboard.general.string = message.text
+            copied = true
+          } label: {
+            Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
+              .font(.caption.weight(.semibold))
+          }
+          .foregroundStyle(copied ? .green : CancelItTheme.muted)
+          .accessibilityLabel(copied ? "Assistant message copied" : "Copy assistant message")
+        }
+      }
       if message.role == .assistant { Spacer(minLength: 44) }
     }
   }
