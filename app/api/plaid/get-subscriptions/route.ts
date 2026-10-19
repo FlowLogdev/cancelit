@@ -28,6 +28,8 @@ const normalizeFrequency = (frequency?: string | null) => {
 const getPlaidError = (error: any) => ({
   code: error?.response?.data?.error_code,
   message: error?.response?.data?.error_message || error?.message,
+  type: error?.response?.data?.error_type,
+  status: error?.response?.status,
 })
 
 export async function POST(request: Request) {
@@ -241,12 +243,16 @@ export async function POST(request: Request) {
       add_on_notice: addOnNotice,
     })
   } catch (error: any) {
-    console.error("Error getting subscriptions:", error)
+    const plaidError = getPlaidError(error)
+    console.error("Error getting subscriptions:", plaidError)
     return NextResponse.json(
       {
-        error: error.message || "Failed to get subscriptions",
+        error:
+          plaidError.message ||
+          "Plaid could not retrieve transactions for this bank connection. Please reconnect the institution and try again.",
+        plaid_error_code: plaidError.code || null,
       },
-      { status: 500 },
+      { status: plaidError.status && plaidError.status >= 400 && plaidError.status < 500 ? plaidError.status : 500 },
     )
   }
 }
