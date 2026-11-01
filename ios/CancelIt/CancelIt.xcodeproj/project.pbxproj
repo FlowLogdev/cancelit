@@ -389,7 +389,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = CancelIt/Resources/CancelIt.entitlements;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = RA23AA27SX;
 				INFOPLIST_FILE = CancelIt/Resources/Info.plist;
@@ -476,7 +475,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = CancelIt/Resources/CancelIt.entitlements;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = RA23AA27SX;
 				INFOPLIST_FILE = CancelIt/Resources/Info.plist;
