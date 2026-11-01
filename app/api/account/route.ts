@@ -11,6 +11,14 @@ type StoredPlaidItem = {
   access_token: string
 }
 
+function isMissingSupportTicketsTable(error: { code?: string; message?: string } | null) {
+  // The restored production database can predate the optional support-ticket
+  // feature. A missing table contains no customer tickets to retain, so it
+  // must not prevent an otherwise valid account-deletion request. Other
+  // errors (including permissions and connectivity) remain hard failures.
+  return error?.code === "42P01" || error?.code === "PGRST205"
+}
+
 function createAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -69,9 +77,12 @@ export async function DELETE() {
     // Support tickets contain contact details, so remove them explicitly. The rest of the
     // customer data is linked to auth.users with ON DELETE CASCADE in the production schema.
     const { error: ticketError } = await admin.from("support_tickets").delete().eq("user_id", user.id)
-    if (ticketError) {
+    if (ticketError && !isMissingSupportTicketsTable(ticketError)) {
       console.error("Failed to remove support tickets during account deletion:", ticketError)
       return NextResponse.json({ error: "Could not delete your account data. Please try again." }, { status: 500 })
+    }
+    if (ticketError) {
+      console.warn("Support tickets table is not installed; no ticket data exists to remove.")
     }
 
     const { error: deleteError } = await admin.auth.admin.deleteUser(user.id)
