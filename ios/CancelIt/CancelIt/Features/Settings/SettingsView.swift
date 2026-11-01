@@ -3,6 +3,8 @@ import SwiftUI
 struct SettingsView: View {
   @Environment(AppState.self) private var appState
   @State private var showPricing = false
+  @State private var showDeleteConfirmation = false
+  @State private var isDeletingAccount = false
 
   var body: some View {
     List {
@@ -34,11 +36,43 @@ struct SettingsView: View {
           Label("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
         }
       }
+
+      Section("Account") {
+        Button(role: .destructive) {
+          showDeleteConfirmation = true
+        } label: {
+          if isDeletingAccount {
+            HStack {
+              ProgressView()
+              Text("Deleting account…")
+            }
+          } else {
+            Label("Delete account", systemImage: "trash")
+          }
+        }
+        .disabled(isDeletingAccount)
+
+        Text("Permanently deletes your account, tracked subscriptions, connected bank records, support requests, and other associated data. This does not cancel an active App Store subscription.")
+          .font(.footnote)
+          .foregroundStyle(CancelItTheme.muted)
+      }
     }
     .scrollContentBackground(.hidden)
     .background(CancelItTheme.background)
     .navigationTitle("Settings")
     .sheet(isPresented: $showPricing) { PricingView() }
+    .alert("Delete your account?", isPresented: $showDeleteConfirmation) {
+      Button("Delete Account", role: .destructive) {
+        Task {
+          isDeletingAccount = true
+          _ = await appState.deleteAccount()
+          isDeletingAccount = false
+        }
+      }
+      Button("Cancel", role: .cancel) {}
+    } message: {
+      Text("This permanently deletes your CancelIt account and associated data. This action cannot be undone. Active App Store subscriptions must be cancelled separately through Apple.")
+    }
   }
 }
 

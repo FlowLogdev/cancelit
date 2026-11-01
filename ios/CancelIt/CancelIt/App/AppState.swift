@@ -85,6 +85,32 @@ final class AppState {
     }
   }
 
+  func deleteAccount() async -> Bool {
+    let token = await auth.accessToken
+    guard token != nil else {
+      toast = .error("You need to be signed in to delete your account.")
+      return false
+    }
+
+    do {
+      try await api.delete("/api/account", token: token)
+      try? await auth.signOut()
+      authPhase = .signedOut
+      email = ""
+      subscriptions = []
+      connectedItems = []
+      detectedSubscriptions = []
+      assistantMessages = [
+        .init(role: .assistant, text: "Your account and associated data were deleted.")
+      ]
+      toast = .success("Your account was deleted.")
+      return true
+    } catch {
+      toast = .error(error.localizedDescription)
+      return false
+    }
+  }
+
   func refresh() async {
     let token = await auth.accessToken
     let customerResult: CustomerEnvelope? = try? await api.get("/api/customers", token: token)
