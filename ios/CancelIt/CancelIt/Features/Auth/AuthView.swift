@@ -11,11 +11,11 @@ struct AuthView: View {
     ScrollView {
       VStack(alignment: .leading, spacing: 28) {
         VStack(alignment: .leading, spacing: 12) {
-          Image(systemName: "scissors.circle.fill")
-            .font(.system(size: 56))
-            .foregroundStyle(CancelItTheme.accent)
-          Text("CancelIt")
-            .font(.system(size: 42, weight: .bold, design: .rounded))
+          Image("CancelItLogo")
+            .resizable()
+            .scaledToFit()
+            .frame(height: 132)
+            .accessibilityLabel("CancelIt")
           Text("Find recurring charges, understand what they cost, and get a clear path to cancel what you no longer need.")
             .font(.body)
             .foregroundStyle(CancelItTheme.muted)

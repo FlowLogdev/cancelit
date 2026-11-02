@@ -46,12 +46,15 @@ final class AppState {
   func signIn(email: String, password: String) async {
     do {
       try await auth.signIn(email: email, password: password)
-      if let user = await auth.currentUser() {
-        self.email = user.email ?? email
-        await billing.identify(userId: user.id)
-      } else {
-        self.email = email
+      guard let user = await auth.currentUser(), await auth.accessToken != nil else {
+        try? await auth.signOut()
+        authPhase = .signedOut
+        self.email = ""
+        toast = .error("Your email must be confirmed before you can sign in. Open the confirmation email, then sign in again.")
+        return
       }
+      self.email = user.email ?? email
+      await billing.identify(userId: user.id)
       authPhase = .signedIn
       await refresh()
     } catch {
@@ -61,13 +64,15 @@ final class AppState {
 
   func signUp(email: String, password: String) async {
     do {
-      try await auth.signUp(email: email, password: password)
-      if let user = await auth.currentUser() {
-        self.email = user.email ?? email
-        await billing.identify(userId: user.id)
-      } else {
-        self.email = email
+      let hasSession = try await auth.signUp(email: email, password: password)
+      guard hasSession, let user = await auth.currentUser() else {
+        authPhase = .signedOut
+        self.email = ""
+        toast = .success("Check your email to confirm your account, then return to CancelIt and sign in.")
+        return
       }
+      self.email = user.email ?? email
+      await billing.identify(userId: user.id)
       authPhase = .signedIn
       await refresh()
     } catch {
@@ -184,7 +189,11 @@ final class AppState {
     }
   }
 
-  func handle(url: URL) {
-    auth.handle(url: url)
+  func handle(url: URL) async {
+    guard await auth.handle(url: url) else {
+      toast = .error("We could not complete the email confirmation. Please request a new confirmation email and try again.")
+      return
+    }
+    await bootstrap()
   }
 }

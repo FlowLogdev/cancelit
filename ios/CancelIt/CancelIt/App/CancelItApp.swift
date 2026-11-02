@@ -11,7 +11,7 @@ struct CancelItApp: App {
         .environment(appState)
         .preferredColorScheme(.dark)
         .onOpenURL { url in
-          appState.handle(url: url)
+          Task { await appState.handle(url: url) }
         }
         .task {
           await appState.bootstrap()
