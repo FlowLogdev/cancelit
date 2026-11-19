@@ -101,6 +101,24 @@ struct PricingView: View {
           ForEach(plans) { plan in
             PricingCard(plan: plan)
           }
+
+          VStack(spacing: 8) {
+            Text("Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel subscriptions in your Apple ID account settings.")
+              .font(.footnote)
+              .multilineTextAlignment(.center)
+              .foregroundStyle(CancelItTheme.muted)
+
+            HStack(spacing: 14) {
+              Link("Privacy Policy", destination: AppLegal.privacyPolicy)
+              Text("•")
+                .foregroundStyle(CancelItTheme.muted)
+              Link("Terms of Use (EULA)", destination: AppLegal.termsOfUse)
+            }
+            .font(.footnote.weight(.semibold))
+            .tint(CancelItTheme.accent)
+          }
+          .frame(maxWidth: .infinity)
+          .padding(.top, 6)
         }
         .padding(20)
       }
@@ -155,6 +173,11 @@ struct PricingView: View {
       appState.toast = .error(error.localizedDescription)
     }
   }
+}
+
+private enum AppLegal {
+  static let privacyPolicy = URL(string: "https://www.cancelit.app/privacy-policy")!
+  static let termsOfUse = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
 }
 
 struct PricingCard: View {
